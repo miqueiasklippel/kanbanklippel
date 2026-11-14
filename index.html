@@ -1,0 +1,3470 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kanban Klippel</title>
+<style>
+  /* ============================================================
+     KANBAN KLIPPEL — v1.0.0
+     Cor de destaque: #084D6E (azul petróleo)
+     Tipografia: pilha de fontes do sistema (100% offline)
+     Arquitetura: arquivo único, sem dependências externas
+     ============================================================ */
+
+  :root {
+    /* Azul da marca. Reservado para o que é interativo e para a moldura. */
+    --accent:        #084D6E;
+    --accent-hover:  #0A6392;
+    --accent-press:  #063A53;
+    --accent-soft:   #DBE9F2;
+    --accent-ink:    #FFFFFF;
+    --on-accent-soft:#05364D;
+
+    --bg:        #DCE7EE;
+    --surface:   #FFFFFF;
+    --surface-2: #EDF3F7;
+    --surface-3: #DCE8F0;
+
+    --topbar:     #084D6E;
+    --topbar-grad: linear-gradient(180deg, #0A5A80 0%, #084D6E 58%, #06415E 100%);
+    --topbar-ink: #FFFFFF;
+    --topbar-2:   rgba(255,255,255,.13);
+    --topbar-3:   rgba(255,255,255,.22);
+    --topbar-edge: rgba(255,255,255,.14);
+
+    --ink:       #0C1A24;
+    --ink-muted: #455E71;
+    --ink-soft:  #7390A3;
+
+    --border:        #C6D9E4;
+    --border-strong: #A3C0D2;
+    --hairline:      rgba(12,26,36,.07);
+
+    --danger: #B5362A;
+    --danger-soft: #FAE9E6;
+    --warn:   #9A5B0C;
+    --ok:     #14713A;
+
+    /* Sombras em duas camadas: contato curto e difusão longa. */
+    --shadow-xs: 0 1px 1px rgba(10,46,66,.05);
+    --shadow-sm: 0 1px 2px rgba(10,46,66,.07), 0 2px 6px rgba(10,46,66,.05);
+    --shadow:    0 1px 2px rgba(10,46,66,.08), 0 8px 22px rgba(10,46,66,.09);
+    --shadow-lg: 0 2px 6px rgba(6,32,48,.14), 0 28px 60px rgba(6,32,48,.26);
+
+    --tip-bg: #0C1A24;
+    --tip-ink: #F2F7FA;
+
+    --r-xs: 6px; --r-sm: 9px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px;
+
+    --ease: cubic-bezier(.2,.7,.3,1);
+    --t-fast: 120ms var(--ease);
+    --t-mid:  200ms var(--ease);
+  }
+
+  [data-theme="dark"] {
+    --accent:        #4BA3D0;
+    --accent-hover:  #67B6DF;
+    --accent-press:  #3786B1;
+    --accent-soft:   #11313F;
+    --accent-ink:    #05222F;
+    --on-accent-soft:#9BD2EE;
+
+    --bg:        #0A151D;
+    --surface:   #11222D;
+    --surface-2: #162B37;
+    --surface-3: #1E3848;
+
+    --topbar:     #061620;
+    --topbar-grad: linear-gradient(180deg, #0A222E 0%, #061620 70%);
+    --topbar-ink: #DCEBF4;
+    --topbar-2:   rgba(255,255,255,.09);
+    --topbar-3:   rgba(255,255,255,.17);
+    --topbar-edge: rgba(255,255,255,.08);
+
+    --ink:       #E6EFF5;
+    --ink-muted: #9BB2C0;
+    --ink-soft:  #728B9B;
+
+    --border:        #1E3543;
+    --border-strong: #2C4B5E;
+    --hairline:      rgba(255,255,255,.06);
+
+    --danger: #E8695B;
+    --danger-soft: #35201D;
+    --warn:   #D08A31;
+    --ok:     #4CAF6D;
+
+    --shadow-xs: 0 1px 1px rgba(0,0,0,.3);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.34), 0 2px 6px rgba(0,0,0,.26);
+    --shadow:    0 1px 3px rgba(0,0,0,.4), 0 10px 26px rgba(0,0,0,.34);
+    --shadow-lg: 0 3px 8px rgba(0,0,0,.5), 0 30px 64px rgba(0,0,0,.6);
+
+    --tip-bg: #E6EFF5;
+    --tip-ink: #0C1A24;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, "Cantarell",
+                 "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px; line-height: 1.5; color: var(--ink); background: var(--bg);
+    display: flex; flex-direction: column;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  button, input, textarea, select { font-family: inherit; }
+  .mono { font-family: ui-monospace, "Cascadia Mono", "Fira Mono", "DejaVu Sans Mono", Consolas, monospace; }
+
+  /* Anel de foco visível, com folga interna para não encostar no conteúdo. */
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
+  .topbar :focus-visible { outline-color: rgba(255,255,255,.85); }
+
+  ::-webkit-scrollbar { width: 11px; height: 11px; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; border: 3.5px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ink-soft); background-clip: padding-box; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  .icon { width: 20px; height: 20px; flex: none; pointer-events: none; }
+  .icon.sm { width: 17px; height: 17px; }
+  .icon.lg { width: 26px; height: 26px; }
+
+  /* ---------- Dicas (tooltips) ---------- */
+  [data-tip] { position: relative; }
+  [data-tip]:hover::after, [data-tip]:focus-visible::after {
+    content: attr(data-tip);
+    position: absolute; top: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+    background: var(--tip-bg); color: var(--tip-ink);
+    font-size: 12px; font-weight: 500; letter-spacing: .005em;
+    padding: 6px 10px; border-radius: var(--r-xs); white-space: nowrap;
+    pointer-events: none; z-index: 400; box-shadow: var(--shadow);
+  }
+  [data-tip][data-key]:hover::after, [data-tip][data-key]:focus-visible::after {
+    content: attr(data-tip) "   " attr(data-key);
+  }
+  [data-tip].tip-right::after { left: auto; right: 0; transform: none; }
+  [data-tip].tip-left::after  { left: 0; right: auto; transform: none; }
+
+  /* ---------- Barra superior ---------- */
+  .topbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 14px; height: 60px; flex: none;
+    background: var(--topbar-grad); color: var(--topbar-ink);
+    position: relative; z-index: 30;
+    box-shadow: inset 0 1px 0 var(--topbar-edge), 0 1px 0 rgba(6,32,48,.5), 0 6px 18px rgba(6,32,48,.18);
+  }
+  .topbar .iconbtn { color: var(--topbar-ink); opacity: .78; }
+  .topbar .iconbtn:hover:not(:disabled) { background: var(--topbar-2); color: var(--topbar-ink); opacity: 1; }
+  .topbar .iconbtn.on { background: var(--topbar-3); color: var(--topbar-ink); opacity: 1; }
+  .topbar .iconbtn.primary { background: #FFFFFF; color: var(--accent); opacity: 1; }
+  .topbar .iconbtn.primary:hover:not(:disabled) { background: #FFFFFF; color: var(--accent-hover); filter: brightness(.96); }
+  [data-theme="dark"] .topbar .iconbtn.primary { background: var(--accent); color: var(--accent-ink); }
+  .topbar .tsep { background: var(--topbar-3); }
+  .topbar .iconbtn.danger:hover:not(:disabled) { background: rgba(255,86,74,.24); color: #FFD9D4; opacity: 1; }
+  .brand { display: flex; align-items: center; gap: 10px; flex: none; }
+  .brand .logo {
+    width: 36px; height: 36px; border-radius: var(--r-sm); background: #FFFFFF;
+    display: grid; place-items: center; flex: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,.28), inset 0 0 0 1px rgba(0,0,0,.06);
+  }
+  .brand .logo svg { width: 25px; height: 25px; }
+  .brand .wordmark { display: flex; flex-direction: column; line-height: 1.15; }
+  .brand .wordmark b { font-size: 15px; font-weight: 600; letter-spacing: -.012em; color: var(--topbar-ink); }
+  .brand .wordmark span { font-size: 11.5px; color: rgba(255,255,255,.58); font-weight: 400; }
+
+  .vault-block { display: flex; align-items: center; gap: 8px; min-width: 0; margin-left: 6px; }
+  .vault-name {
+    background: transparent; border: 1px solid transparent; color: var(--topbar-ink);
+    font-size: 15px; font-weight: 600; padding: 8px 10px; border-radius: var(--r-sm);
+    min-width: 90px; width: 210px; max-width: 30vw; text-overflow: ellipsis;
+    letter-spacing: -.008em; transition: background var(--t-fast), border-color var(--t-fast);
+  }
+  .vault-name::placeholder { color: rgba(255,255,255,.5); }
+  .vault-name:hover { background: var(--topbar-3); }
+  .vault-name:focus { background: rgba(255,255,255,.2); border-color: rgba(255,255,255,.5); outline: none; }
+  .status {
+    display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500;
+    color: rgba(255,255,255,.72); white-space: nowrap; padding: 5px 10px 5px 9px; border-radius: 99px;
+    background: var(--topbar-2); transition: color var(--t-fast);
+  }
+  .status .dot {
+    width: 7px; height: 7px; border-radius: 50%; background: #74DD98; flex: none;
+    box-shadow: 0 0 0 3px rgba(116,221,152,.18); transition: background var(--t-fast), box-shadow var(--t-fast);
+  }
+  .status.dirty .dot { background: #F5B942; box-shadow: 0 0 0 3px rgba(245,185,66,.2); }
+  .status.dirty { color: #FAD79A; }
+
+  .grow { flex: 1 1 auto; min-width: 0; }
+
+  .search {
+    display: flex; align-items: center; gap: 7px; background: var(--topbar-2);
+    border: 1px solid transparent; border-radius: var(--r-md); padding: 0 10px;
+    height: 38px; width: 230px; max-width: 32vw; color: rgba(255,255,255,.7);
+  }
+  .search:focus-within { border-color: rgba(255,255,255,.45); background: rgba(255,255,255,.2); color: #fff; }
+  .search input {
+    border: none; background: transparent; outline: none; color: var(--topbar-ink);
+    font-size: 14px; width: 100%; min-width: 0;
+  }
+  .search input::placeholder { color: rgba(255,255,255,.55); }
+  .search .clear { border: none; background: transparent; color: rgba(255,255,255,.7); cursor: pointer; padding: 2px; display: none; border-radius: 6px; }
+  .search.has-value .clear { display: inline-flex; }
+
+  .toolbar { display: flex; align-items: center; gap: 4px; flex: none; }
+  .tgroup { display: flex; align-items: center; gap: 2px; }
+  .tsep { width: 1px; height: 22px; background: var(--border); margin: 0 7px; flex: none; }
+
+  .iconbtn {
+    width: 38px; height: 38px; border-radius: var(--r-sm);
+    border: 1px solid transparent; background: transparent; color: var(--ink-muted);
+    display: inline-grid; place-items: center; cursor: pointer;
+    transition: background var(--t-fast), color var(--t-fast), transform var(--t-fast);
+  }
+  .iconbtn:hover:not(:disabled) { background: var(--surface-3); color: var(--accent); }
+  .iconbtn:active:not(:disabled) { transform: scale(.94); }
+  .iconbtn:disabled { opacity: .35; cursor: default; }
+  .iconbtn.on { background: var(--accent-soft); color: var(--on-accent-soft); }
+  .iconbtn.primary { background: var(--accent); color: var(--accent-ink); }
+  .iconbtn.primary:hover:not(:disabled) { background: var(--accent-hover); color: var(--accent-ink); }
+  .iconbtn.danger:hover:not(:disabled) { background: var(--danger-soft); color: var(--danger); }
+
+  /* ---------- Menu suspenso ---------- */
+  .menu-wrap { position: relative; }
+  .menu {
+    position: absolute; top: calc(100% + 10px); right: 0; width: 292px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+    box-shadow: var(--shadow-lg); padding: 6px; z-index: 300; display: none;
+  }
+  .menu.open { display: block; animation: menuIn 140ms var(--ease); transform-origin: top right; }
+  @keyframes menuIn { from { opacity: 0; transform: translateY(-5px) scale(.985); } }
+  .menu-label {
+    font-size: 12px; font-weight: 500; color: var(--ink-soft);
+    padding: 10px 11px 5px;
+  }
+  .menu-item {
+    display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+    border: none; background: transparent; color: var(--ink); cursor: pointer;
+    padding: 9px 11px; border-radius: var(--r-xs); font-size: 14px; font-weight: 500;
+    transition: background var(--t-fast), color var(--t-fast);
+  }
+  .menu-item:hover { background: var(--surface-3); color: var(--accent); }
+  .menu-item .icon { color: var(--ink-muted); }
+  .menu-item:hover .icon { color: var(--accent); }
+  .menu-item .mi-text { flex: 1 1 auto; min-width: 0; }
+  .menu-item .mi-sub { display: block; font-size: 12px; font-weight: 400; color: var(--ink-soft); margin-top: 1px; }
+  .menu-item:hover .mi-sub { color: var(--ink-muted); }
+  .menu-item kbd { margin-left: auto; }
+  .menu-sep { height: 1px; background: var(--hairline); margin: 6px 5px; }
+  .menu-item .badge-on { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-soft); padding: 2px 8px; border-radius: 99px; }
+
+  /* ---------- Área de trabalho ---------- */
+  .workspace { flex: 1 1 auto; display: flex; min-height: 0; overflow: hidden; }
+  .board {
+    flex: 1 1 auto; display: flex; gap: 16px; padding: 20px; overflow-x: auto; overflow-y: hidden;
+    align-items: flex-start; height: 100%;
+  }
+
+  /* ---------- Coluna ----------
+     A cor escolhida para a coluna tinge o próprio cabeçalho (via rgba
+     calculada no JS), para que as raias sejam reconhecíveis de relance. */
+  .column {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-lg);
+    width: 314px; min-width: 314px; display: flex; flex-direction: column;
+    max-height: 100%; box-shadow: var(--shadow-xs); overflow: hidden;
+    transition: box-shadow var(--t-mid), opacity var(--t-fast);
+  }
+  .column:hover { box-shadow: var(--shadow-sm); }
+  .column.dragging { opacity: .28; }
+  .col-stripe { height: 3px; flex: none; }
+  .col-head {
+    display: flex; align-items: center; gap: 8px; padding: 12px 9px 12px 11px;
+    cursor: grab; touch-action: none; border-bottom: 1px solid var(--hairline);
+  }
+  .col-head:active { cursor: grabbing; }
+  .col-grip { color: var(--ink-soft); opacity: 0; flex: none; transition: opacity var(--t-fast); margin-left: -4px; }
+  .column:hover .col-grip { opacity: .55; }
+  .col-title {
+    font-weight: 600; font-size: 15px; letter-spacing: -.01em; flex: 1 1 auto;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .col-count {
+    font-weight: 500; font-size: 12.5px; color: var(--ink-soft); flex: none;
+    min-width: 22px; text-align: right; font-variant-numeric: tabular-nums;
+  }
+  .col-actions { display: flex; gap: 1px; flex: none; opacity: 0; transition: opacity var(--t-fast); }
+  .column:hover .col-actions, .col-actions:focus-within { opacity: 1; }
+  @media (hover: none) { .col-actions { opacity: 1; } .col-grip { opacity: .5; } }
+
+  .minibtn {
+    width: 27px; height: 27px; border-radius: var(--r-xs); border: none; background: transparent;
+    color: var(--ink-soft); display: inline-grid; place-items: center; cursor: pointer;
+    transition: background var(--t-fast), color var(--t-fast);
+  }
+  .minibtn:hover:not(:disabled) { background: var(--surface-3); color: var(--accent); }
+  .minibtn.danger:hover:not(:disabled) { background: var(--danger-soft); color: var(--danger); }
+  .minibtn:disabled { opacity: .25; cursor: default; }
+  .col-head .minibtn { width: 24px; height: 24px; }
+  .col-head .minibtn:hover:not(:disabled) { background: rgba(255,255,255,.55); }
+  [data-theme="dark"] .col-head .minibtn:hover:not(:disabled) { background: rgba(255,255,255,.1); }
+
+  .col-list { padding: 10px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1 1 auto; min-height: 44px; }
+  .col-empty { color: var(--ink-soft); font-size: 13px; text-align: center; padding: 18px 8px; line-height: 1.5; }
+
+  /* ---------- Rodapé da coluna: atalho de criação ---------- */
+  .col-foot { padding: 0 10px 10px; }
+  .add-item {
+    width: 100%; border: 1px solid transparent; background: transparent;
+    color: var(--ink-muted); font-weight: 500; font-size: 13.5px; padding: 9px; border-radius: var(--r-sm);
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px;
+    transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+  }
+  .add-item:hover { color: var(--accent); background: var(--surface); border-color: var(--border); }
+  .composer { display: none; flex-direction: column; gap: 8px; }
+  .col-foot.composing .add-item { display: none; }
+  .col-foot.composing .composer { display: flex; }
+  .composer-input {
+    width: 100%; resize: none; border: 1px solid var(--accent); background: var(--surface);
+    color: var(--ink); border-radius: var(--r-sm); padding: 10px 11px; font-size: 14.5px;
+    line-height: 1.4; outline: none; box-shadow: var(--shadow-xs); min-height: 62px;
+  }
+  .composer-input::placeholder { color: var(--ink-soft); }
+  .composer-actions { display: flex; align-items: center; gap: 6px; }
+  .composer-hint { flex: 1 1 auto; font-size: 11.5px; color: var(--ink-soft); }
+
+  /* ---------- Cartão ---------- */
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: 11px 12px; cursor: grab; touch-action: none; position: relative;
+    box-shadow: var(--shadow-xs);
+    transition: box-shadow var(--t-mid), border-color var(--t-fast), transform var(--t-fast);
+  }
+  .card:hover { box-shadow: var(--shadow-sm); border-color: var(--border-strong); transform: translateY(-1px); }
+  .card:active { transform: none; }
+  .card.dragging { opacity: .28; }
+  .card.tinted { padding-left: 14px; }
+  .card .tint { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: var(--r-md) 0 0 var(--r-md); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600;
+    padding: 3px 8px 3px 6px; border-radius: var(--r-xs); letter-spacing: .002em; line-height: 1.35;
+  }
+  .chip .icon { width: 13px; height: 13px; }
+  .chip.urg { color: #fff; }
+  .chip.due { background: var(--surface-3); color: var(--ink-muted); }
+  .chip.due.today { background: #FBEBD2; color: #875310; }
+  .chip.due.late  { background: var(--danger-soft); color: var(--danger); }
+  [data-theme="dark"] .chip.due.today { background: #38290F; color: #E0A551; }
+
+  .card-top { display: flex; align-items: flex-start; gap: 6px; }
+  .card-title { font-weight: 500; font-size: 14.5px; flex: 1 1 auto; word-break: break-word; line-height: 1.45; }
+  .desc-toggle {
+    border: none; background: transparent; cursor: pointer; color: var(--ink-soft);
+    padding: 2px; border-radius: var(--r-xs); flex: none; display: inline-grid; place-items: center;
+    transition: color var(--t-fast), background var(--t-fast);
+  }
+  .desc-toggle:hover { color: var(--accent); background: var(--surface-3); }
+  .desc-toggle .icon { transition: transform var(--t-mid); }
+  .card.collapsed .desc-toggle .icon { transform: rotate(-90deg); }
+  .card-desc { margin-top: 7px; color: var(--ink-muted); font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+  .card.collapsed .card-desc { display: none; }
+
+  /* Controles só aparecem com o cursor: o conteúdo manda, a ferramenta espera. */
+  .card-controls {
+    display: flex; align-items: center; gap: 1px; margin-top: 9px; padding-top: 7px;
+    border-top: 1px solid var(--hairline); opacity: .38; transition: opacity var(--t-fast);
+  }
+  .card:hover .card-controls, .card:focus-within .card-controls { opacity: 1; }
+  @media (hover: none) { .card-controls { opacity: .9; } }
+  .card-controls .minibtn { width: 25px; height: 25px; }
+  .card-controls .spacer { flex: 1 1 auto; }
+
+  /* ---------- Arrastar e soltar ---------- */
+  .drag-ghost { position: fixed; pointer-events: none; z-index: 1000; opacity: .96; box-shadow: var(--shadow-lg); transform: rotate(1.5deg) scale(1.02); margin: 0; }
+  .drop-indicator { background: var(--accent); border-radius: 99px; }
+  .drop-indicator.h { height: 3px; box-shadow: 0 0 0 3px var(--accent-soft); }
+  .drop-indicator.v { width: 3px; align-self: stretch; min-height: 180px; box-shadow: 0 0 0 3px var(--accent-soft); }
+  body.dragging-active { user-select: none; cursor: grabbing; }
+
+  /* ---------- Anotações ---------- */
+  .notes-panel {
+    width: 320px; min-width: 320px; border-left: 1px solid var(--border);
+    background: var(--surface-2); display: flex; flex-direction: column;
+  }
+  .notes-panel.closed { display: none; }
+  .notes-head { display: flex; align-items: center; gap: 9px; padding: 13px 10px 13px 16px; border-bottom: 1px solid var(--hairline); }
+  .notes-head h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.01em; flex: 1 1 auto; }
+  .notes-head .icon { color: var(--ink-soft); }
+  .notes-list { flex: 1 1 auto; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+  .note {
+    border-radius: var(--r-sm); padding: 12px 12px 9px; position: relative;
+    box-shadow: 0 1px 1px rgba(60,55,25,.1), 0 4px 10px rgba(60,55,25,.08);
+    transition: box-shadow var(--t-mid), transform var(--t-fast);
+  }
+  .note:hover { box-shadow: 0 1px 2px rgba(60,55,25,.14), 0 10px 20px rgba(60,55,25,.13); transform: translateY(-1px); }
+  .note textarea {
+    width: 100%; border: none; background: transparent; resize: none; overflow: hidden;
+    min-height: 46px; font: 400 14px/1.5 inherit; color: #2A2A20; outline: none; display: block;
+  }
+  .note textarea::placeholder { color: rgba(42,42,32,.4); }
+  .note-foot { display: flex; align-items: center; gap: 4px; margin-top: 4px; min-height: 24px; }
+  .note-colors { display: flex; gap: 5px; flex: 1 1 auto; opacity: 0; transition: opacity var(--t-fast); }
+  .note:hover .note-colors, .note:focus-within .note-colors { opacity: 1; }
+  @media (hover: none) { .note-colors { opacity: 1; } }
+  .note-colors .dot { width: 14px; height: 14px; border-radius: 50%; cursor: pointer; border: 2px solid rgba(0,0,0,.08); transition: transform var(--t-fast); }
+  .note-colors .dot:hover { transform: scale(1.18); }
+  .note-colors .dot.sel { border-color: rgba(0,0,0,.52); }
+  .note-del {
+    border: none; background: transparent; cursor: pointer; color: rgba(42,42,32,.5);
+    padding: 4px; border-radius: var(--r-xs); display: inline-grid; place-items: center;
+    transition: color var(--t-fast), background var(--t-fast);
+  }
+  .note-del:hover { color: #2A2A20; background: rgba(0,0,0,.08); }
+  .note-del.danger:hover { color: #9B2C1E; background: rgba(155,44,30,.12); }
+  .notes-empty { color: var(--ink-soft); font-size: 13.5px; text-align: center; margin: 26px 14px; line-height: 1.6; }
+
+  /* ---------- Estado vazio ---------- */
+  .empty { margin: auto; text-align: center; color: var(--ink-muted); max-width: 360px; padding: 32px; }
+  .empty .glyph {
+    width: 64px; height: 64px; border-radius: var(--r-lg); background: var(--surface);
+    color: var(--accent); display: grid; place-items: center; margin: 0 auto 18px;
+    box-shadow: var(--shadow-sm); border: 1px solid var(--border);
+  }
+  .empty h2 { color: var(--ink); font-weight: 600; font-size: 19px; letter-spacing: -.015em; margin: 0 0 8px; }
+  .empty p { margin: 0 0 20px; font-size: 14px; line-height: 1.6; }
+
+  /* ---------- Rodapé ---------- */
+  .footer {
+    flex: none; background: var(--topbar); color: rgba(255,255,255,.46);
+    text-align: center; font-size: 11.5px; font-weight: 400;
+    letter-spacing: .01em; padding: 8px 14px;
+    box-shadow: inset 0 1px 0 rgba(0,0,0,.25);
+  }
+
+  /* ---------- Janelas modais ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(6,24,36,.5); display: none;
+    align-items: center; justify-content: center; padding: 20px; z-index: 700;
+    backdrop-filter: blur(3px);
+  }
+  .overlay.open { display: flex; animation: overlayIn 140ms var(--ease); }
+  .overlay.open > .modal { animation: modalIn 200ms var(--ease); }
+  @keyframes overlayIn { from { opacity: 0; } }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(10px) scale(.985); } }
+  .overlay.stacked { z-index: 760; }
+  .modal {
+    background: var(--surface); color: var(--ink); width: 100%; max-width: 452px;
+    border-radius: var(--r-lg); box-shadow: var(--shadow-lg); overflow: hidden;
+    max-height: 90vh; display: flex; flex-direction: column; border: 1px solid var(--border);
+  }
+  .modal.wide { max-width: 620px; }
+  .modal-head { display: flex; align-items: center; gap: 12px; padding: 17px 19px; border-bottom: 1px solid var(--hairline); flex: none; }
+  .modal-head .mh-icon { width: 34px; height: 34px; border-radius: var(--r-sm); background: var(--accent-soft); color: var(--on-accent-soft); display: grid; place-items: center; flex: none; }
+  .modal-head h3 { margin: 0; font-size: 16.5px; font-weight: 600; letter-spacing: -.015em; flex: 1 1 auto; }
+  .modal-head .mh-sub { display: block; font-size: 12.5px; font-weight: 400; color: var(--ink-soft); margin-top: 2px; letter-spacing: 0; }
+  .modal-body { padding: 19px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
+  .modal-text { font-size: 14px; color: var(--ink-muted); margin: 0; line-height: 1.6; }
+  .field label { display: block; font-weight: 500; font-size: 13px; margin-bottom: 7px; color: var(--ink-muted); }
+  .field input[type="text"], .field input[type="password"], .field input[type="date"], .field input[type="url"], .field textarea {
+    width: 100%; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--ink);
+    border-radius: var(--r-sm); padding: 10px 12px; font-size: 14.5px; outline: none;
+    transition: border-color var(--t-fast), background var(--t-fast), box-shadow var(--t-fast);
+  }
+  .field input:focus, .field textarea:focus {
+    border-color: var(--accent); background: var(--surface);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .field textarea { resize: vertical; min-height: 84px; line-height: 1.5; }
+  .field-hint { font-size: 12px; color: var(--ink-soft); margin: 5px 0 0; }
+  .row2 { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row2 > * { flex: 1 1 160px; }
+  .row2 > .field-urg { flex: 1 1 252px; }
+  .row2 > .field-due { flex: 0 1 152px; }
+  .check { display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: var(--ink-muted); cursor: pointer; }
+  .check input { width: 16px; height: 16px; accent-color: var(--accent); }
+
+  .swatches { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+  .swatches .sw { width: 30px; height: 30px; border-radius: 9px; cursor: pointer; border: 3px solid transparent; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+  .swatches .sw.sel { border-color: var(--ink); }
+  .swatches .sw-none { background: var(--surface-2); border: 1px solid var(--border-strong); position: relative; }
+  .swatches .sw-none::after { content: ""; position: absolute; inset: 4px; background: linear-gradient(to top right, transparent 44%, var(--danger) 45%, var(--danger) 55%, transparent 56%); }
+  .swatches .sw-none.sel { border: 3px solid var(--ink); }
+  .swatches input[type="color"] { width: 42px; height: 32px; border: 1px solid var(--border-strong); border-radius: 9px; background: var(--surface-2); cursor: pointer; padding: 2px; }
+  .urg-options { display: flex; gap: 7px; flex-wrap: wrap; }
+  .urg-btn { border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--ink-muted); padding: 7px 12px; border-radius: var(--r-xs); font-weight: 500; font-size: 13px; cursor: pointer; transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast); }
+  .urg-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .urg-btn.sel { border-color: transparent; color: #fff; font-weight: 600; }
+  .urg-btn.sel:hover { color: #fff; }
+  .urg-btn.sel.none { background: var(--ink-muted); }
+  .pwd-error { color: var(--danger); font-size: 13px; margin: 0; min-height: 1.15em; font-weight: 600; }
+  .modal-foot { display: flex; justify-content: flex-end; gap: 9px; padding: 15px 19px; flex-wrap: wrap; border-top: 1px solid var(--hairline); flex: none; background: var(--surface-2); }
+  .modal-foot .left { margin-right: auto; }
+  .mbtn {
+    border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink);
+    font-weight: 500; font-size: 13.5px; padding: 10px 16px; border-radius: var(--r-sm); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px;
+    transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast), transform var(--t-fast);
+  }
+  .mbtn:hover { border-color: var(--accent); color: var(--accent); }
+  .mbtn:active { transform: translateY(1px); }
+  .mbtn.primary { background: var(--accent); border-color: transparent; color: var(--accent-ink); font-weight: 600; box-shadow: var(--shadow-xs); }
+  .mbtn.primary:hover { background: var(--accent-hover); color: var(--accent-ink); }
+  .mbtn.ghost { background: transparent; border-color: transparent; color: var(--ink-muted); }
+  .mbtn.ghost:hover { background: var(--surface-3); }
+  .mbtn.danger { color: var(--danger); border-color: var(--border-strong); }
+  .mbtn.danger:hover { background: var(--danger-soft); border-color: var(--danger); }
+
+  kbd {
+    background: var(--surface-2); border: 1px solid var(--border); border-bottom-width: 2px;
+    border-radius: var(--r-xs); padding: 2px 6px; font-family: inherit; font-size: 11px; font-weight: 500;
+    color: var(--ink-soft); white-space: nowrap; line-height: 1.4;
+  }
+
+  /* ---------- Tela inicial (cofres recentes) ---------- */
+  .start {
+    position: fixed; inset: 0; z-index: 600;
+    background: var(--bg);
+    display: none; flex-direction: column; align-items: center; overflow-y: auto; padding: 0 20px 48px;
+  }
+  .start.open { display: flex; }
+  .start::before {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 300px; pointer-events: none;
+    background: linear-gradient(180deg, var(--accent-soft) 0%, rgba(219,233,242,0) 100%);
+  }
+  [data-theme="dark"] .start::before { background: linear-gradient(180deg, var(--accent-soft) 0%, rgba(17,49,63,0) 100%); }
+  .start-inner { width: 100%; max-width: 680px; position: relative; padding-top: 56px; }
+
+  .start-hero { display: flex; align-items: center; gap: 16px; margin-bottom: 34px; }
+  .start-hero .logo {
+    width: 58px; height: 58px; border-radius: var(--r-md); background: #FFFFFF;
+    display: grid; place-items: center; flex: none;
+    box-shadow: var(--shadow), inset 0 0 0 1px rgba(0,0,0,.05);
+  }
+  .start-hero .logo svg { width: 42px; height: 42px; }
+  .start-hero h1 { margin: 0; font-size: 27px; font-weight: 600; letter-spacing: -.028em; line-height: 1.15; }
+  .start-hero p { margin: 5px 0 0; font-size: 14.5px; color: var(--ink-muted); line-height: 1.5; }
+  .start-hero .spacer { flex: 1 1 auto; }
+
+  .start-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(156px, 1fr)); gap: 10px; margin-bottom: 36px; }
+  .action-card {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 12px; text-align: left; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: 16px; color: var(--ink); box-shadow: var(--shadow-xs);
+    transition: border-color var(--t-fast), box-shadow var(--t-mid), transform var(--t-fast);
+  }
+  .action-card:hover { border-color: var(--accent); box-shadow: var(--shadow-sm); transform: translateY(-2px); }
+  .action-card:active { transform: none; }
+  .action-card .ac-icon {
+    width: 36px; height: 36px; border-radius: var(--r-sm); background: var(--accent-soft);
+    color: var(--on-accent-soft); display: grid; place-items: center; flex: none;
+  }
+  .action-card b { display: block; font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; }
+  .action-card span.sub { display: block; font-size: 12.5px; color: var(--ink-soft); margin-top: 3px; line-height: 1.4; }
+
+  .start-section-head { display: flex; align-items: baseline; gap: 10px; margin: 0 0 12px; }
+  .start-section-head h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.012em; color: var(--ink); flex: 1 1 auto; }
+  .recents { display: flex; flex-direction: column; gap: 6px; }
+  .recent-row {
+    display: flex; align-items: center; gap: 2px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--r-sm); padding-right: 8px;
+    transition: border-color var(--t-fast), box-shadow var(--t-mid);
+  }
+  .recent-row:hover { border-color: var(--accent); box-shadow: var(--shadow-xs); }
+  .recent {
+    display: flex; align-items: center; gap: 13px; background: transparent;
+    border: none; border-radius: var(--r-sm); padding: 11px 4px 11px 13px;
+    cursor: pointer; text-align: left; color: var(--ink); flex: 1 1 auto; min-width: 0;
+  }
+  .recent .r-icon {
+    width: 34px; height: 34px; border-radius: var(--r-xs); background: var(--surface-2);
+    color: var(--ink-soft); display: grid; place-items: center; flex: none;
+    transition: background var(--t-fast), color var(--t-fast);
+  }
+  .recent-row:hover .r-icon { background: var(--accent-soft); color: var(--on-accent-soft); }
+  .recent .r-body { flex: 1 1 auto; min-width: 0; }
+  .recent .r-name { font-size: 14.5px; font-weight: 500; display: flex; align-items: center; gap: 7px; }
+  .recent .r-name .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .recent .r-name .icon { color: var(--ink-soft); flex: none; }
+  .recent .r-where {
+    font-size: 11.5px; color: var(--ink-soft); margin-top: 3px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-family: ui-monospace, "Cascadia Mono", "Fira Mono", "DejaVu Sans Mono", Consolas, monospace;
+  }
+  .recent .r-when { font-size: 11.5px; color: var(--ink-soft); flex: none; white-space: nowrap; align-self: center; }
+  .r-remove { flex: none; width: 32px; height: 32px; opacity: 0; transition: opacity var(--t-fast); }
+  .recent-row:hover .r-remove, .r-remove:focus-visible { opacity: 1; }
+  @media (hover: none) { .r-remove { opacity: 1; } }
+  .recents-empty {
+    border: 1px dashed var(--border-strong); border-radius: var(--r-md); padding: 30px 22px;
+    text-align: center; color: var(--ink-soft); font-size: 13.5px; line-height: 1.6;
+  }
+  .start-foot { margin-top: 34px; text-align: center; font-size: 12px; color: var(--ink-soft); line-height: 1.6; }
+
+  /* ---------- Guia ---------- */
+  .guide-nav { display: flex; gap: 5px; padding: 10px 18px 0; flex-wrap: wrap; flex: none; }
+  .guide-tab { border: 1px solid transparent; background: transparent; color: var(--ink-muted); font-size: 13.5px; font-weight: 500; padding: 7px 12px; border-radius: var(--r-xs); cursor: pointer; transition: background var(--t-fast), color var(--t-fast); }
+  .guide-tab:hover { background: var(--surface-3); }
+  .guide-tab.sel { background: var(--accent-soft); color: var(--on-accent-soft); }
+  .guide-pane { display: none; flex-direction: column; gap: 16px; }
+  .guide-pane.sel { display: flex; }
+  .guide-pane h4 { margin: 0 0 8px; font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
+  .guide-pane h4 .icon { color: var(--accent); }
+  .guide-pane p, .guide-pane li { font-size: 14px; color: var(--ink-muted); line-height: 1.65; max-width: 62ch; }
+  .guide-pane p { margin: 0; }
+  .guide-pane ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 5px; }
+  .guide-pane code { background: var(--surface-3); padding: 1px 6px; border-radius: 5px; font-size: 12.5px; font-family: ui-monospace, "Cascadia Code", "Fira Mono", Consolas, monospace; }
+  .shortcuts { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 8px; }
+  .shortcuts li { display: flex; align-items: center; gap: 9px; font-size: 13px; }
+  .shortcuts li .sc-keys { display: flex; gap: 3px; flex: none; }
+  .callout { display: flex; gap: 11px; background: var(--accent-soft); border-radius: var(--r-sm); padding: 13px 14px; }
+  .callout .icon { color: var(--on-accent-soft); flex: none; margin-top: 1px; }
+  .callout p { font-size: 13px; color: var(--on-accent-soft); }
+
+  /* ---------- Navegador da nuvem ---------- */
+  .dav-bar { display: flex; align-items: center; gap: 6px; padding: 11px 18px; border-bottom: 1px solid var(--border); flex: none; background: var(--surface-2); }
+  .crumbs { display: flex; align-items: center; gap: 3px; flex: 1 1 auto; min-width: 0; overflow-x: auto; font-size: 12.5px; }
+  .crumbs button { border: none; background: transparent; color: var(--ink-muted); cursor: pointer; font-size: 12.5px; font-weight: 600; padding: 4px 6px; border-radius: 6px; white-space: nowrap; }
+  .crumbs button:hover { background: var(--surface-3); color: var(--accent); }
+  .crumbs .sep { color: var(--ink-soft); flex: none; display: grid; place-items: center; }
+  .dav-list { display: flex; flex-direction: column; gap: 3px; min-height: 200px; }
+  .dav-row {
+    display: flex; align-items: center; gap: 11px; border: 1px solid transparent; background: transparent;
+    border-radius: var(--r-sm); padding: 9px 10px; cursor: pointer; color: var(--ink); text-align: left; width: 100%;
+  }
+  .dav-row:hover { background: var(--surface-3); }
+  .dav-row .icon { color: var(--ink-muted); }
+  .dav-row:hover .icon { color: var(--accent); }
+  .dav-row .dv-name { flex: 1 1 auto; font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dav-row .dv-meta { font-size: 11.5px; color: var(--ink-soft); flex: none; }
+  .dav-msg { text-align: center; color: var(--ink-soft); font-size: 13.5px; padding: 34px 12px; }
+  .spinner { width: 22px; height: 22px; border: 2.5px solid var(--border-strong); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- Avisos (toasts) ---------- */
+  .toasts { position: fixed; right: 18px; bottom: 18px; z-index: 900; display: flex; flex-direction: column; gap: 9px; align-items: flex-end; }
+  .toast {
+    display: flex; align-items: center; gap: 10px; background: var(--surface); color: var(--ink);
+    border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-sm);
+    padding: 12px 15px; box-shadow: var(--shadow); font-size: 13.5px; font-weight: 500;
+    max-width: 340px; line-height: 1.45; animation: toastin 200ms var(--ease);
+  }
+  .toast.ok { border-left-color: var(--ok); }
+  .toast.ok .icon { color: var(--ok); }
+  .toast.err { border-left-color: var(--danger); }
+  .toast.err .icon { color: var(--danger); }
+  .toast .icon { color: var(--accent); }
+  @keyframes toastin { from { opacity: 0; transform: translateY(10px) scale(.97); } }
+
+  /* ---------- Vínculo entre anotação e cartão ---------- */
+  .note-link {
+    display: flex; align-items: center; gap: 6px; width: 100%;
+    font-size: 11.5px; font-weight: 600; color: #35424A;
+    background: rgba(0,0,0,.07); border: none; border-radius: var(--r-xs);
+    padding: 4px 8px; margin-bottom: 9px; cursor: pointer; text-align: left;
+    transition: background var(--t-fast);
+  }
+  .note-link:hover { background: rgba(0,0,0,.14); }
+  .note-link .txt { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .note-link.none { color: #55645C; opacity: .7; }
+  .chip.notelink { background: var(--accent-soft); color: var(--on-accent-soft); border: none; cursor: pointer; font-family: inherit; }
+  .chip.notelink:hover { background: var(--accent); color: var(--accent-ink); }
+  .flash { animation: flashring 1.4s ease; }
+  @keyframes flashring {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(8,77,110,0); }
+    15%, 60% { box-shadow: 0 0 0 3px var(--accent); }
+  }
+  .link-list { display: flex; flex-direction: column; gap: 4px; }
+  .link-group { font-size: 12.5px; font-weight: 500; color: var(--ink-soft); padding: 12px 8px 5px; display: flex; align-items: center; gap: 8px; }
+  .link-group .swatch { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .link-row { display: flex; align-items: center; gap: 9px; border: 1px solid transparent; background: transparent; border-radius: var(--r-xs); padding: 9px 10px; cursor: pointer; color: var(--ink); text-align: left; width: 100%; font-size: 14px; font-weight: 500; transition: background var(--t-fast), color var(--t-fast); }
+  .link-row:hover { background: var(--surface-3); color: var(--accent); }
+  .link-row.sel { background: var(--accent-soft); color: var(--on-accent-soft); }
+  .link-row .lr-name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ---------- Assistente de novo cofre ---------- */
+  .dest-options { display: flex; flex-direction: column; gap: 7px; }
+  .dest-btn {
+    display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; cursor: pointer;
+    border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--ink);
+    border-radius: var(--r-md); padding: 11px 12px;
+  }
+  .dest-btn:hover { border-color: var(--accent); }
+  .dest-btn.sel { border-color: var(--accent); background: var(--accent-soft); color: var(--on-accent-soft); }
+  .dest-btn .icon { color: var(--ink-muted); flex: none; }
+  .dest-btn.sel .icon { color: var(--on-accent-soft); }
+  .dest-btn b { display: block; font-size: 14px; font-weight: 600; letter-spacing: -.008em; }
+  .dest-btn span.sub { display: block; font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+  .dest-btn.sel span.sub { color: var(--on-accent-soft); opacity: .8; }
+  .dest-path {
+    display: flex; align-items: center; gap: 9px; font-size: 12px; font-weight: 400;
+    color: var(--on-accent-soft); background: var(--accent-soft); border-radius: var(--r-xs);
+    padding: 9px 11px; margin-top: 9px; word-break: break-all; line-height: 1.5;
+    font-family: ui-monospace, "Cascadia Mono", "Fira Mono", "DejaVu Sans Mono", Consolas, monospace;
+  }
+  .pwd-fields { display: none; flex-direction: column; gap: 13px; margin-top: 13px; }
+  .pwd-fields.open { display: flex; }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+  @media (max-width: 1100px) { .brand .wordmark { display: none; } }
+  @media (max-width: 980px)  { .search { width: 170px; } .status span { display: none; } .status { padding: 6px; } }
+  @media (max-width: 820px)  { .search { display: none; } .vault-name { width: 140px; } }
+  @media (max-width: 700px)  { .notes-panel { position: fixed; right: 0; top: 60px; bottom: 34px; z-index: 20; box-shadow: var(--shadow-lg); } .tsep { margin: 0 2px; } }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     BIBLIOTECA DE ÍCONES (SVG em linha, traço, 24x24)
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <!-- ============================================================
+       ÍCONE DA MARCA — substitua APENAS o conteúdo deste símbolo
+       pelo conteúdo do seu arquivo .svg (tudo o que estiver entre
+       as tags <svg> e </svg>), mantendo o viewBox correspondente.
+       ============================================================ -->
+  <symbol id="i-brand" viewBox="0 0 768 768">
+    <rect x="50.42" y="205.30" width="202.53" height="357.41" rx="20.25" fill="#1e3a54"/>
+    <rect x="62.33" y="217.21" width="178.70" height="47.65" rx="4.77" fill="#e74c3c"/>
+    <rect x="62.33" y="283.93" width="178.70" height="71.48" rx="7.15" fill="#ffffff" fill-opacity=".9"/>
+    <rect x="62.33" y="374.47" width="178.70" height="71.48" rx="7.15" fill="#ffffff" fill-opacity=".9"/>
+    <rect x="62.33" y="465.01" width="178.70" height="71.48" rx="7.15" fill="#ffffff" fill-opacity=".9"/>
+    <rect x="282.73" y="205.30" width="202.53" height="357.41" rx="20.25" fill="#1e3a54"/>
+    <rect x="294.64" y="217.21" width="178.70" height="47.65" rx="4.77" fill="#f39c12"/>
+    <rect x="294.64" y="283.93" width="178.70" height="71.48" rx="7.15" fill="#ffffff" fill-opacity=".9"/>
+    <rect x="294.64" y="374.47" width="178.70" height="71.48" rx="7.15" fill="#ffffff" fill-opacity=".9"/>
+    <rect x="515.05" y="205.30" width="202.53" height="357.41" rx="20.25" fill="#1e3a54"/>
+    <rect x="526.96" y="217.21" width="178.70" height="47.65" rx="4.77" fill="#27ae60"/>
+    <rect x="526.96" y="283.93" width="178.70" height="71.48" rx="7.15" fill="#ffffff" fill-opacity=".9"/>
+  </symbol>
+
+  <symbol id="i-vault" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="11.5" cy="12" r="3.6"/><path d="M11.5 5.6v2.8M11.5 15.6v2.8M5.1 12h2.8M15.1 12h2.8"/>
+  </symbol>
+  <symbol id="i-vault-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 12.8V6.5A2.5 2.5 0 0 0 18.5 4h-13A2.5 2.5 0 0 0 3 6.5v11A2.5 2.5 0 0 0 5.5 20h7.3"/><circle cx="10.5" cy="12" r="3.2"/><path d="M18 16v6M15 19h6"/>
+  </symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.2l2.1 2.6h7.7A2.5 2.5 0 0 1 21 10.1v7.4a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/>
+  </symbol>
+  <symbol id="i-folder-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 17.5V7.5A2.5 2.5 0 0 1 5.5 5h3.2l2.1 2.6h7.7A2.5 2.5 0 0 1 21 10.1v.9"/><path d="M3.4 19.6 6 12.4a1.6 1.6 0 0 1 1.5-1.1h13a1.2 1.2 0 0 1 1.14 1.6l-2.2 6.1a1.6 1.6 0 0 1-1.5 1.06H4.6a1.2 1.2 0 0 1-1.2-1.5z"/>
+  </symbol>
+  <symbol id="i-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19.5 21h-15A1.5 1.5 0 0 1 3 19.5v-15A1.5 1.5 0 0 1 4.5 3h11L21 8.5v11A1.5 1.5 0 0 1 19.5 21z"/><path d="M8 3v5.5h7V3"/><path d="M7.5 21v-6h9v6"/>
+  </symbol>
+  <symbol id="i-save-as" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M13 21H4.5A1.5 1.5 0 0 1 3 19.5v-15A1.5 1.5 0 0 1 4.5 3h11L21 8.5V13"/><path d="M8 3v5.5h7V3"/><path d="M18 16v6M15 19h6"/>
+  </symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.2 12S6 5.6 12 5.6 21.8 12 21.8 12 18 18.4 12 18.4 2.2 12 2.2 12z"/><circle cx="12" cy="12" r="2.9"/>
+  </symbol>
+  <symbol id="i-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9.7 6a9.6 9.6 0 0 1 2.3-.4c6 0 9.8 6.4 9.8 6.4a17 17 0 0 1-2.9 3.6M6.3 7.9A17.4 17.4 0 0 0 2.2 12S6 18.4 12 18.4a9.4 9.4 0 0 0 3.6-.7"/><path d="M10 10a2.9 2.9 0 0 0 4 4"/><path d="M3.5 3.5l17 17"/>
+  </symbol>
+  <symbol id="i-note" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 13.6V5.5A1.5 1.5 0 0 0 18.5 4h-13A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20h8.1z"/><path d="M20 13.6h-4.9a1.5 1.5 0 0 0-1.5 1.5V20"/><path d="M8 9h8M8 12.5h4"/>
+  </symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20.5 14.4A8.6 8.6 0 0 1 9.6 3.5a8.6 8.6 0 1 0 10.9 10.9z"/>
+  </symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>
+  </symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 5v14M5 12h14"/>
+  </symbol>
+  <symbol id="i-column-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="4" width="6" height="16" rx="1.6"/><rect x="11.5" y="4" width="6" height="9" rx="1.6"/><path d="M19.5 16v6M16.5 19h6"/>
+  </symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="12" cy="5.2" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="18.8" r="1.7"/>
+  </symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7.3 19a4.3 4.3 0 0 1 .3-8.6 5.9 5.9 0 0 1 11.2 1.6A3.6 3.6 0 0 1 17.8 19z"/>
+  </symbol>
+  <symbol id="i-cloud-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7.5 16.5a4 4 0 0 1 .1-8.1 5.6 5.6 0 0 1 10.7 1.5 3.4 3.4 0 0 1 .6 6.6"/><path d="M12 12v8M8.8 16.8 12 20l3.2-3.2"/>
+  </symbol>
+  <symbol id="i-cloud-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7.5 16.5a4 4 0 0 1 .1-8.1 5.6 5.6 0 0 1 10.7 1.5 3.4 3.4 0 0 1 .6 6.6"/><path d="M12 20v-8M8.8 15.2 12 12l3.2 3.2"/>
+  </symbol>
+  <symbol id="i-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="9"/><path d="M9.4 9.4a2.7 2.7 0 0 1 5.3.7c0 1.8-2.7 2.3-2.7 4"/><path d="M12 17.4h.01"/>
+  </symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="9"/><path d="M12 11v5.4M12 7.6h.01"/>
+  </symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="9"/><path d="M12 7v5.3l3.4 2"/>
+  </symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4.5" y="10.2" width="15" height="10.3" rx="2.2"/><path d="M8.2 10.2V7.6a3.8 3.8 0 0 1 7.6 0v2.6"/>
+  </symbol>
+  <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="8" cy="15.6" r="3.6"/><path d="M10.7 13.1 20 3.8M17 6.5l2.4 2.4M14.6 8.9 17 11.3"/>
+  </symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 6.6h16"/><path d="M9.3 6.6V5.2A1.6 1.6 0 0 1 10.9 3.6h2.2a1.6 1.6 0 0 1 1.6 1.6v1.4"/><path d="M6.4 6.6l.8 12.5A2 2 0 0 0 9.2 21h5.6a2 2 0 0 0 2-1.9l.8-12.5"/><path d="M10.4 10.5v6.2M13.6 10.5v6.2"/>
+  </symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 20.1l4.6-1.1 9.5-9.5a2.2 2.2 0 0 0-3.1-3.1L5.5 15.9z"/><path d="M14.4 6.9l2.7 2.7"/>
+  </symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 6l12 12M18 6L6 18"/>
+  </symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4.5 12.5l5 5 10-11"/>
+  </symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="10.8" cy="10.8" r="6.8"/><path d="M20 20l-4.4-4.4"/>
+  </symbol>
+  <symbol id="i-chev-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 8 12l6.5 6.5"/></symbol>
+  <symbol id="i-chev-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 5.5 16 12l-6.5 6.5"/></symbol>
+  <symbol id="i-chev-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 14.5 12 8l6.5 6.5"/></symbol>
+  <symbol id="i-chev-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 9.5 12 16l6.5-6.5"/></symbol>
+  <symbol id="i-arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19.5v-15M5.5 11 12 4.5 18.5 11"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3.5" y="5" width="17" height="16" rx="2.2"/><path d="M3.5 9.8h17M8.2 3v4M15.8 3v4"/>
+  </symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5.5 21V4.2M5.5 5.2h10.8l-1.7 3.6 1.7 3.6H5.5"/>
+  </symbol>
+  <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>
+  </symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20.4 12a8.4 8.4 0 1 1-2.5-6"/><path d="M20.4 4.4V10h-5.6"/>
+  </symbol>
+  <symbol id="i-layout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="4" width="6" height="16" rx="1.6"/><rect x="11" y="4" width="4.5" height="16" rx="1.6"/><rect x="17.5" y="4" width="3.5" height="16" rx="1.6"/>
+  </symbol>
+  <symbol id="i-keyboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2.5" y="6" width="19" height="12" rx="2.2"/><path d="M6.5 9.5h.01M10 9.5h.01M13.5 9.5h.01M17 9.5h.01M6.5 12.8h.01M10 12.8h.01M13.5 12.8h.01M17 12.8h.01M8.5 15.6h7"/>
+  </symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3.2 4.8 6v5.6c0 4.4 3 8 7.2 9.2 4.2-1.2 7.2-4.8 7.2-9.2V6z"/><path d="M9.3 12.2l1.9 1.9 3.6-3.9"/>
+  </symbol>
+  <symbol id="i-power" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3.5v8"/><path d="M6.8 6.6a8.2 8.2 0 1 0 10.4 0"/>
+  </symbol>
+  <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 6.5h11M9 12h11M9 17.5h11M4.3 6.5h.01M4.3 12h.01M4.3 17.5h.01"/>
+  </symbol>
+  <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.2 13.8a3.6 3.6 0 0 0 5.3.35l2.6-2.6a3.7 3.7 0 0 0-5.25-5.25l-1.5 1.5"/>
+    <path d="M13.8 10.2a3.6 3.6 0 0 0-5.3-.35l-2.6 2.6a3.7 3.7 0 0 0 5.25 5.25l1.5-1.5"/>
+  </symbol>
+  <symbol id="i-unlink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9.6 14.4 7.9 16.1a3.7 3.7 0 0 1-5.25-5.25L4.4 9.1"/>
+    <path d="m14.4 9.6 1.7-1.7a3.7 3.7 0 0 1 5.25 5.25l-1.75 1.75"/>
+    <path d="M3.5 3.5l17 17"/>
+  </symbol>
+  <symbol id="i-computer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2.5" y="4" width="19" height="12.5" rx="2"/><path d="M8 20.5h8M12 16.5v4"/>
+  </symbol>
+  <symbol id="i-exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14.5 4.5h4A1.5 1.5 0 0 1 20 6v12a1.5 1.5 0 0 1-1.5 1.5h-4"/>
+    <path d="M10.2 8.2 14 12l-3.8 3.8"/><path d="M14 12H4"/>
+  </symbol>
+  <symbol id="i-grip" viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+    <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+    <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+  </symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.3 4.3 2.6 17.5A1.9 1.9 0 0 0 4.3 20.4h15.4a1.9 1.9 0 0 0 1.7-2.9L13.7 4.3a1.9 1.9 0 0 0-3.4 0z"/><path d="M12 9.5v4M12 17h.01"/>
+  </symbol>
+</svg>
+
+<!-- ============================================================
+     BARRA SUPERIOR
+     ============================================================ -->
+<header class="topbar">
+  <div class="brand">
+    <span class="logo"><svg><use href="#i-brand"></use></svg></span>
+    <span class="wordmark"><b>Kanban Klippel</b><span>Cofres de trabalho</span></span>
+  </div>
+
+  <div class="vault-block">
+    <input id="vaultName" class="vault-name" type="text" value="Sem título" aria-label="Nome do cofre" placeholder="Nome do cofre">
+    <span class="status" id="status" data-tip="Estado do cofre"><span class="dot"></span><span id="statusText">Salvo</span></span>
+  </div>
+
+  <div class="grow"></div>
+
+  <div class="search" id="searchBox">
+    <svg class="icon sm"><use href="#i-search"></use></svg>
+    <input type="text" id="searchInput" placeholder="Buscar cartões…" aria-label="Buscar cartões">
+    <button class="clear" id="searchClear" aria-label="Limpar busca"><svg class="icon sm"><use href="#i-x"></use></svg></button>
+  </div>
+
+  <nav class="toolbar" aria-label="Ferramentas">
+    <div class="tgroup">
+      <button class="iconbtn" id="btnNew" data-key="Ctrl+N" data-tip="Novo cofre" aria-label="Novo cofre"><svg class="icon"><use href="#i-vault-plus"></use></svg></button>
+      <button class="iconbtn" id="btnOpen" data-key="Ctrl+O" data-tip="Abrir cofre" aria-label="Abrir cofre"><svg class="icon"><use href="#i-folder-open"></use></svg></button>
+      <button class="iconbtn" id="btnSave" data-key="Ctrl+S" data-tip="Salvar cofre" aria-label="Salvar cofre"><svg class="icon"><use href="#i-save"></use></svg></button>
+    </div>
+    <span class="tsep"></span>
+    <div class="tgroup">
+      <button class="iconbtn" id="btnToggleDesc" data-key="Ctrl+3" data-tip="Ocultar descrições" aria-label="Ocultar descrições"><svg class="icon"><use href="#i-eye"></use></svg></button>
+      <button class="iconbtn" id="btnNotes" data-key="Ctrl+1" data-tip="Anotações" aria-label="Anotações"><svg class="icon"><use href="#i-note"></use></svg></button>
+      <button class="iconbtn" id="btnTheme" data-key="Ctrl+2" data-tip="Modo escuro" aria-label="Modo escuro"><svg class="icon"><use href="#i-moon"></use></svg></button>
+    </div>
+    <span class="tsep"></span>
+    <div class="tgroup">
+      <button class="iconbtn primary" id="btnAddCol" data-key="Ctrl+L" data-tip="Nova coluna" aria-label="Nova coluna"><svg class="icon"><use href="#i-column-plus"></use></svg></button>
+      <div class="menu-wrap">
+        <button class="iconbtn tip-right" id="btnMenu" data-tip="Menu" aria-label="Menu" aria-haspopup="true" aria-expanded="false"><svg class="icon"><use href="#i-menu"></use></svg></button>
+        <div class="menu" id="mainMenu" role="menu">
+          <div class="menu-label">Cofre</div>
+          <button class="menu-item" id="miRecents" role="menuitem"><svg class="icon"><use href="#i-clock"></use></svg><span class="mi-text">Cofres recentes</span></button>
+          <button class="menu-item" id="miSaveAs" role="menuitem"><svg class="icon"><use href="#i-save-as"></use></svg><span class="mi-text">Salvar como…</span><kbd>Ctrl+Shift+S</kbd></button>
+          <button class="menu-item" id="miPassword" role="menuitem"><svg class="icon"><use href="#i-key"></use></svg><span class="mi-text">Senha do cofre<span class="mi-sub" id="miPasswordSub">Sem proteção</span></span></button>
+          <button class="menu-item" id="miAutosave" role="menuitem"><svg class="icon"><use href="#i-power"></use></svg><span class="mi-text">Salvamento automático<span class="mi-sub">A cada 45 segundos</span></span><span class="badge-on" id="autosaveBadge" style="display:none">Ativo</span></button>
+          <div class="menu-sep"></div>
+          <div class="menu-label">Nuvem (WebDAV)</div>
+          <button class="menu-item" id="miDavConnect" role="menuitem"><svg class="icon"><use href="#i-cloud"></use></svg><span class="mi-text">Conectar à nuvem<span class="mi-sub" id="miDavSub">Não conectado</span></span></button>
+          <button class="menu-item" id="miDavOpen" role="menuitem"><svg class="icon"><use href="#i-cloud-down"></use></svg><span class="mi-text">Abrir cofre da nuvem</span></button>
+          <button class="menu-item" id="miDavSave" role="menuitem"><svg class="icon"><use href="#i-cloud-up"></use></svg><span class="mi-text">Salvar cofre na nuvem</span></button>
+          <div class="menu-sep"></div>
+          <div class="menu-label">Ajuda</div>
+          <button class="menu-item" id="miGuide" role="menuitem"><svg class="icon"><use href="#i-help"></use></svg><span class="mi-text">Guia de uso<span class="mi-sub">Todas as funcionalidades</span></span><kbd>F1</kbd></button>
+          <button class="menu-item" id="miShortcuts" role="menuitem"><svg class="icon"><use href="#i-keyboard"></use></svg><span class="mi-text">Atalhos de teclado</span></button>
+          <div class="menu-sep"></div>
+          <button class="menu-item" id="miExit" role="menuitem"><svg class="icon"><use href="#i-exit"></use></svg><span class="mi-text">Sair do aplicativo</span><kbd>Ctrl+Q</kbd></button>
+        </div>
+      </div>
+    </div>
+    <span class="tsep"></span>
+    <div class="tgroup">
+      <button class="iconbtn danger tip-right" id="btnExit" data-key="Ctrl+Q" data-tip="Sair do aplicativo" aria-label="Sair do aplicativo"><svg class="icon"><use href="#i-exit"></use></svg></button>
+    </div>
+  </nav>
+</header>
+
+<!-- ============================================================
+     ÁREA DE TRABALHO
+     ============================================================ -->
+<div class="workspace">
+  <main class="board" id="board" aria-label="Quadro Kanban"></main>
+  <aside class="notes-panel closed" id="notesPanel" aria-label="Anotações">
+    <div class="notes-head">
+      <svg class="icon"><use href="#i-note"></use></svg>
+      <h2>Anotações</h2>
+      <button class="iconbtn" id="btnAddNote" data-tip="Nova anotação" aria-label="Nova anotação"><svg class="icon"><use href="#i-plus"></use></svg></button>
+      <button class="iconbtn" id="btnCloseNotes" data-tip="Fechar painel" aria-label="Fechar painel de anotações"><svg class="icon"><use href="#i-x"></use></svg></button>
+    </div>
+    <div class="notes-list" id="notesList"></div>
+  </aside>
+</div>
+
+<footer class="footer">Kanban Klippel - desenvolvido por M. A. KLIPPEL &nbsp;·&nbsp; v1.0.0</footer>
+
+<input type="file" id="fileInput" accept="application/json,.json,.kanban" style="display:none">
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<!-- ============================================================
+     TELA INICIAL — COFRES RECENTES
+     ============================================================ -->
+<div class="start" id="startScreen">
+  <div class="start-inner">
+    <div class="start-hero">
+      <span class="logo"><svg><use href="#i-brand"></use></svg></span>
+      <div>
+        <h1>Kanban Klippel</h1>
+        <p>Escolha um cofre recente ou comece um novo quadro de trabalho.</p>
+      </div>
+      <span class="spacer"></span>
+      <button class="iconbtn" id="startTheme" data-tip="Alternar tema" aria-label="Alternar tema"><svg class="icon"><use href="#i-moon"></use></svg></button>
+      <button class="iconbtn" id="startGuide" data-tip="Guia de uso" aria-label="Guia de uso"><svg class="icon"><use href="#i-help"></use></svg></button>
+      <button class="iconbtn" id="startClose" data-tip="Voltar ao quadro" aria-label="Voltar ao quadro" style="display:none"><svg class="icon"><use href="#i-x"></use></svg></button>
+    </div>
+
+    <div class="start-actions">
+      <button class="action-card" id="startNew">
+        <span class="ac-icon"><svg class="icon"><use href="#i-vault-plus"></use></svg></span>
+        <span class="ac-text"><b>Novo cofre</b><span class="sub">Quadro em branco</span></span>
+      </button>
+      <button class="action-card" id="startOpen">
+        <span class="ac-icon"><svg class="icon"><use href="#i-folder-open"></use></svg></span>
+        <span class="ac-text"><b>Abrir arquivo</b><span class="sub">Do seu computador</span></span>
+      </button>
+      <button class="action-card" id="startCloud">
+        <span class="ac-icon"><svg class="icon"><use href="#i-cloud"></use></svg></span>
+        <span class="ac-text"><b>Abrir da nuvem</b><span class="sub">Servidor WebDAV</span></span>
+      </button>
+      <button class="action-card" id="startGuideCard">
+        <span class="ac-icon"><svg class="icon"><use href="#i-help"></use></svg></span>
+        <span class="ac-text"><b>Guia de uso</b><span class="sub">Atalhos e recursos</span></span>
+      </button>
+    </div>
+
+    <div class="start-section-head">
+      <h2>Cofres recentes</h2>
+      <button class="mbtn ghost" id="clearRecents" style="font-size:12px;padding:6px 10px">Limpar lista</button>
+    </div>
+    <div class="recents" id="recentsList"></div>
+
+    <p class="start-foot">Cada cofre é um arquivo <code>.kanban</code> no seu computador ou na sua nuvem.<br>Esta lista guarda apenas atalhos; nenhum conteúdo sai daqui.</p>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAIS
+     ============================================================ -->
+
+<!-- Coluna -->
+<div class="overlay" id="colOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="colModalTitle">
+    <div class="modal-head">
+      <span class="mh-icon"><svg class="icon"><use href="#i-column-plus"></use></svg></span>
+      <h3 id="colModalTitle">Nova coluna</h3>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label for="colNameInput">Nome da coluna</label><input type="text" id="colNameInput" placeholder="Ex.: A fazer"></div>
+      <div class="field"><label>Cor de identificação</label><div class="swatches" id="colSwatches"></div></div>
+    </div>
+    <div class="modal-foot">
+      <button class="mbtn ghost" id="colCancel">Cancelar</button>
+      <button class="mbtn primary" id="colSave"><svg class="icon sm"><use href="#i-check"></use></svg><span id="colSaveLabel">Criar coluna</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- Item -->
+<div class="overlay" id="itemOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="itemModalTitle">
+    <div class="modal-head">
+      <span class="mh-icon"><svg class="icon"><use href="#i-list"></use></svg></span>
+      <h3 id="itemModalTitle">Novo item</h3>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label for="itemTitleInput">Título</label><input type="text" id="itemTitleInput" placeholder="Ex.: Conferir folha de junho"></div>
+      <div class="field"><label for="itemDescInput">Descrição</label><textarea id="itemDescInput" placeholder="Detalhes do item (opcional)"></textarea></div>
+      <div class="row2">
+        <div class="field field-urg"><label>Urgência</label><div class="urg-options" id="urgOptions"></div></div>
+        <div class="field field-due"><label for="itemDueInput">Prazo</label><input type="date" id="itemDueInput"></div>
+      </div>
+      <div class="field"><label>Cor do item</label><div class="swatches" id="itemSwatches"></div></div>
+    </div>
+    <div class="modal-foot">
+      <button class="mbtn ghost" id="itemCancel">Cancelar</button>
+      <button class="mbtn primary" id="itemSave"><svg class="icon sm"><use href="#i-check"></use></svg><span id="itemSaveLabel">Adicionar</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmação genérica -->
+<div class="overlay" id="confirmOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <span class="mh-icon" id="confirmIcon"><svg class="icon"><use href="#i-alert"></use></svg></span>
+      <h3 id="confirmTitle">Confirmar</h3>
+    </div>
+    <div class="modal-body"><p class="modal-text" id="confirmText"></p></div>
+    <div class="modal-foot">
+      <button class="mbtn ghost" id="confirmCancel">Cancelar</button>
+      <button class="mbtn danger" id="confirmOk">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Novo cofre (há alterações pendentes) -->
+<div class="overlay" id="newOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <span class="mh-icon"><svg class="icon"><use href="#i-vault-plus"></use></svg></span>
+      <h3>Novo cofre<span class="mh-sub">Há alterações não salvas no cofre atual</span></h3>
+    </div>
+    <div class="modal-body"><p class="modal-text">O que deseja fazer com as alterações atuais antes de abrir um quadro em branco?</p></div>
+    <div class="modal-foot">
+      <button class="mbtn ghost" id="newCancel">Cancelar</button>
+      <button class="mbtn danger" id="newDiscard">Descartar</button>
+      <button class="mbtn primary" id="newSave"><svg class="icon sm"><use href="#i-save"></use></svg>Salvar e continuar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Assistente: novo cofre -->
+<div class="overlay" id="wizOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="wizTitle">
+    <div class="modal-head">
+      <span class="mh-icon"><svg class="icon"><use href="#i-vault-plus"></use></svg></span>
+      <h3 id="wizTitle">Novo cofre<span class="mh-sub">Nome, local de gravação e proteção</span></h3>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="wizName">Nome do cofre</label>
+        <input type="text" id="wizName" placeholder="Ex.: Produção — setembro" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label>Onde gravar</label>
+        <div class="dest-options">
+          <button type="button" class="dest-btn" id="wizDestLocal">
+            <svg class="icon"><use href="#i-computer"></use></svg>
+            <span><b>Neste computador</b><span class="sub">Escolher a pasta e o nome do arquivo</span></span>
+          </button>
+          <button type="button" class="dest-btn" id="wizDestCloud">
+            <svg class="icon"><use href="#i-cloud"></use></svg>
+            <span><b>Na nuvem</b><span class="sub">Servidor WebDAV já configurado</span></span>
+          </button>
+          <button type="button" class="dest-btn sel" id="wizDestLater">
+            <svg class="icon"><use href="#i-clock"></use></svg>
+            <span><b>Definir depois</b><span class="sub">Perguntar na primeira gravação</span></span>
+          </button>
+        </div>
+        <div class="dest-path" id="wizPath" style="display:none"><svg class="icon sm"><use href="#i-check"></use></svg><span id="wizPathText"></span></div>
+      </div>
+
+      <div class="field">
+        <label class="check"><input type="checkbox" id="wizProtect"> Proteger com senha (criptografia AES‑GCM 256)</label>
+        <div class="pwd-fields" id="wizPwdFields">
+          <div class="field"><label for="wizPwd1">Senha</label><input type="password" id="wizPwd1" autocomplete="new-password"></div>
+          <div class="field"><label for="wizPwd2">Confirmar senha</label><input type="password" id="wizPwd2" autocomplete="new-password"></div>
+          <div class="callout"><svg class="icon sm"><use href="#i-alert"></use></svg><p>Sem a senha o conteúdo é irrecuperável. Guarde-a em local seguro.</p></div>
+        </div>
+      </div>
+
+      <p class="pwd-error" id="wizError"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="mbtn ghost" id="wizCancel">Cancelar</button>
+      <button class="mbtn primary" id="wizCreate"><svg class="icon sm"><use href="#i-check"></use></svg>Criar cofre</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vincular anotação a um cartão -->
+<div class="overlay" id="linkOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <span class="mh-icon"><svg class="icon"><use href="#i-link"></use></svg></span>
+      <h3>Vincular anotação<span class="mh-sub">Escolha o cartão ao qual esta nota pertence</span></h3>
+    </div>
+    <div class="modal-body"><div class="link-list" id="linkList"></div></div>
+    <div class="modal-foot">
+      <button class="mbtn ghost left" id="linkClear"><svg class="icon sm"><use href="#i-unlink"></use></svg>Remover vínculo</button>
+      <button class="mbtn ghost" id="linkCancel">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sair com alterações pendentes -->
+<div class="overlay" id="exitOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <span class="mh-icon"><svg class="icon"><use href="#i-exit"></use></svg></span>
+      <h3>Sair do aplicativo<span class="mh-sub">Há alterações não gravadas</span></h3>
+    </div>
+    <div class="modal-body">
+      <p class="modal-text">O cofre <b id="exitVaultName"></b> tem alterações que ainda não foram salvas. O que deseja fazer?</p>
+    </div>
+    <div class="modal-foot">
+      <button class="mbtn ghost" id="exitCancel">Cancelar</button>
+      <button class="mbtn danger" id="exitDiscard">Sair sem salvar</button>
+      <button class="mbtn primary" id="exitSave"><svg class="icon sm"><use href="#i-save"></use></svg>Salvar e sair</button>
+    </div>
+  </div>
+</div>
+
+<!-- Definir senha -->
+<div class="overlay" id="pwdSetOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <span class="mh-icon"><svg class="icon"><use href="#i-shield"></use></svg></span>
+      <h3 id="pwdSetTitle">Proteger o cofre<span class="mh-sub">Criptografia AES‑GCM de 256 bits</span></h3>
+    </div>
+    <div class="modal-body">
+      <p class="modal-text" id="pwdSetText">Você pode proteger este cofre com uma senha. O arquivo será criptografado e exigirá a senha para ser aberto novamente.</p>
+      <div class="field"><label for="pwdSet1">Senha</label><input type="password" id="pwdSet1" autocomplete="new-password"></div>
+      <div class="field"><label for="pwdSet2">Confirmar senha</label><input type="password" id="pwdSet2" autocomplete="new-password"></div>
+      <p class="pwd-error" id="pwdSetError"></p>
+      <div class="callout"><svg class="icon sm"><use href="#i-alert"></use></svg><p>Não há como recuperar o conteúdo caso a senha seja esquecida. Guarde-a em local seguro.</p></div>
+    </div>
+    <div class="modal-foot">
+      <button class="mbtn ghost" id="pwdSetSkip">Sem senha</button>
+      <button class="mbtn primary" id="pwdSetOk"><svg class="icon sm"><use href="#i-lock"></use></svg>Proteger</button>
+    </div>
+  </div>
+</div>
+
+<!-- Digitar senha -->
+<div class="overlay" id="pwdEnterOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <span class="mh-icon"><svg class="icon"><use href="#i-lock"></use></svg></span>
+      <h3 id="pwdEnterTitle">Cofre protegido</h3>
+    </div>
+    <div class="modal-body">
+      <p class="modal-text" id="pwdEnterText">Este cofre está protegido por senha.</p>
+      <div class="field"><label for="pwdEnter1">Senha</label><input type="password" id="pwdEnter1" autocomplete="current-password"></div>
+      <p class="pwd-error" id="pwdEnterError"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="mbtn ghost" id="pwdEnterCancel">Cancelar</button>
+      <button class="mbtn primary" id="pwdEnterOk"><svg class="icon sm"><use href="#i-key"></use></svg>Abrir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Conexão WebDAV -->
+<div class="overlay" id="davConnOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <span class="mh-icon"><svg class="icon"><use href="#i-cloud"></use></svg></span>
+      <h3>Conectar à nuvem<span class="mh-sub">Servidor WebDAV (Nextcloud, ownCloud e afins)</span></h3>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="davUrl">Endereço do servidor</label>
+        <input type="url" id="davUrl" placeholder="https://nuvem.exemplo.com/remote.php/dav/files/usuario/" spellcheck="false">
+        <p class="field-hint">No Nextcloud, o endereço aparece em Configurações → no rodapé da barra lateral dos arquivos.</p>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="davUser">Usuário</label><input type="text" id="davUser" autocomplete="username" spellcheck="false"></div>
+        <div class="field"><label for="davPass">Senha</label><input type="password" id="davPass" autocomplete="current-password"></div>
+      </div>
+      <label class="check"><input type="checkbox" id="davRemember"> Lembrar credenciais neste dispositivo</label>
+      <p class="pwd-error" id="davConnError"></p>
+      <div class="callout"><svg class="icon sm"><use href="#i-info"></use></svg><p>Recomenda-se usar uma <b>senha de aplicativo</b> em vez da senha principal da conta. As credenciais, quando lembradas, ficam somente neste computador.</p></div>
+    </div>
+    <div class="modal-foot">
+      <button class="mbtn ghost left" id="davDisconnect">Desconectar</button>
+      <button class="mbtn ghost" id="davConnCancel">Cancelar</button>
+      <button class="mbtn primary" id="davConnOk"><svg class="icon sm"><use href="#i-check"></use></svg>Conectar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Navegador WebDAV -->
+<div class="overlay" id="davBrowseOverlay">
+  <div class="modal wide" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <span class="mh-icon"><svg class="icon"><use href="#i-cloud"></use></svg></span>
+      <h3 id="davBrowseTitle">Abrir cofre da nuvem<span class="mh-sub" id="davBrowseSub"></span></h3>
+      <button class="iconbtn tip-right" id="davRefresh" data-tip="Atualizar" aria-label="Atualizar"><svg class="icon"><use href="#i-refresh"></use></svg></button>
+    </div>
+    <div class="dav-bar">
+      <button class="minibtn" id="davUp" data-tip="Pasta acima" aria-label="Pasta acima"><svg class="icon sm"><use href="#i-arrow-up"></use></svg></button>
+      <div class="crumbs" id="davCrumbs"></div>
+    </div>
+    <div class="modal-body">
+      <div class="dav-list" id="davList"></div>
+      <div class="field" id="davSaveField" style="display:none">
+        <label for="davFileName">Nome do arquivo</label>
+        <input type="text" id="davFileName" placeholder="meu-cofre.kanban" spellcheck="false">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="mbtn ghost" id="davBrowseCancel">Fechar</button>
+      <button class="mbtn primary" id="davSaveHere" style="display:none"><svg class="icon sm"><use href="#i-cloud-up"></use></svg><span id="davSaveHereLabel">Salvar aqui</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- Guia -->
+<div class="overlay" id="guideOverlay">
+  <div class="modal wide" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <span class="mh-icon"><svg class="icon"><use href="#i-help"></use></svg></span>
+      <h3>Guia do Kanban Klippel<span class="mh-sub">Versão 1.0.0 — todas as funcionalidades</span></h3>
+    </div>
+    <div class="guide-nav" id="guideNav">
+      <button class="guide-tab sel" data-pane="g1">Começar</button>
+      <button class="guide-tab" data-pane="g2">Quadro</button>
+      <button class="guide-tab" data-pane="g3">Cofres e segurança</button>
+      <button class="guide-tab" data-pane="g4">Nuvem WebDAV</button>
+      <button class="guide-tab" data-pane="g5">Atalhos</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="guide-pane sel" id="g1">
+        <p>O <b>Kanban Klippel</b> organiza tarefas em colunas e cartões, com um painel de anotações ao lado. Tudo o que você cria vive dentro de um <b>cofre</b> — um arquivo <code>.kanban</code> guardado no seu computador ou em um servidor WebDAV.</p>
+        <div>
+          <h4><svg class="icon sm"><use href="#i-clock"></use></svg>Tela inicial</h4>
+          <ul>
+            <li>Ao abrir o aplicativo, aparece a lista de <b>cofres recentes</b>: um clique retoma o trabalho de onde parou.</li>
+            <li>Também é possível criar um cofre em branco, abrir um arquivo do computador ou buscar um cofre na nuvem.</li>
+            <li>A lista pode ser reaberta a qualquer momento pelo menu <b>⋮ → Cofres recentes</b>.</li>
+            <li>Este guia também abre pela tela inicial, antes de qualquer cofre ser criado.</li>
+          </ul>
+        </div>
+        <div>
+          <h4><svg class="icon sm"><use href="#i-vault-plus"></use></svg>Criando um cofre</h4>
+          <ul>
+            <li>Ao escolher <b>Novo cofre</b>, uma única janela reúne as três decisões: o nome, onde gravar e se haverá senha.</li>
+            <li>O local pode ser uma pasta deste computador, uma pasta do servidor WebDAV, ou ficar para depois — nesse caso a pergunta volta na primeira gravação.</li>
+            <li>Marcando a proteção por senha, o arquivo já nasce criptografado.</li>
+          </ul>
+        </div>
+        <div>
+          <h4><svg class="icon sm"><use href="#i-layout"></use></svg>Barra superior</h4>
+          <ul>
+            <li><b>Primeiro grupo</b> — novo cofre, abrir e salvar.</li>
+            <li><b>Segundo grupo</b> — mostrar ou ocultar descrições, painel de anotações e alternância entre tema claro e escuro.</li>
+            <li><b>Terceiro grupo</b> — o botão destacado cria colunas; o botão de três pontos abre o menu com nuvem, senha, salvamento automático e este guia.</li>
+            <li>O indicador ao lado do nome do cofre mostra se há alterações pendentes.</li>
+            <li>O último botão, à direita, encerra o aplicativo — e avisa antes, se houver alterações por gravar.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="guide-pane" id="g2">
+        <div>
+          <h4><svg class="icon sm"><use href="#i-column-plus"></use></svg>Colunas</h4>
+          <ul>
+            <li>Crie pelo botão destacado da barra superior, definindo nome e cor de identificação.</li>
+            <li>Reordene arrastando o cabeçalho da coluna ou pelos botões de seta.</li>
+            <li>Um duplo clique no título da coluna abre a edição de nome e cor.</li>
+            <li>O contador ao lado do nome mostra quantos cartões há na coluna.</li>
+          </ul>
+        </div>
+        <div>
+          <h4><svg class="icon sm"><use href="#i-list"></use></svg>Cartões</h4>
+          <ul>
+            <li>Cada cartão aceita título, descrição, nível de urgência, prazo e cor.</li>
+            <li>O prazo ganha destaque em âmbar no dia do vencimento e em vermelho quando atrasado.</li>
+            <li>Mova pelos botões de seta ou arrastando o cartão entre as colunas.</li>
+            <li>O botão de seta ao lado do título recolhe ou expande a descrição individualmente.</li>
+          </ul>
+        </div>
+        <div>
+          <h4><svg class="icon sm"><use href="#i-search"></use></svg>Busca e anotações</h4>
+          <ul>
+            <li>O campo de busca filtra os cartões por título e descrição em todas as colunas.</li>
+            <li>O painel de anotações guarda lembretes avulsos coloridos, salvos junto com o cofre.</li>
+          </ul>
+        </div>
+        <div>
+          <h4><svg class="icon sm"><use href="#i-link"></use></svg>Anotações vinculadas a cartões</h4>
+          <ul>
+            <li>O botão de corrente no rodapé de cada anotação abre a lista de cartões do quadro; escolha um para criar o vínculo.</li>
+            <li>A anotação passa a exibir no topo o título do cartão — um clique leva até ele, com destaque na tela.</li>
+            <li>O cartão vinculado ganha um selo com o número de anotações; clicando nele, o painel se abre já na nota correspondente.</li>
+            <li>Excluir um cartão não apaga as anotações: elas apenas voltam a ficar sem vínculo.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="guide-pane" id="g3">
+        <div>
+          <h4><svg class="icon sm"><use href="#i-vault"></use></svg>O que é um cofre</h4>
+          <ul>
+            <li>É o arquivo que guarda o quadro inteiro: colunas, cartões e anotações.</li>
+            <li>A extensão padrão é <code>.kanban</code>, mas o conteúdo é JSON e pode ser lido por qualquer editor de texto quando não estiver protegido.</li>
+          </ul>
+        </div>
+        <div>
+          <h4><svg class="icon sm"><use href="#i-shield"></use></svg>Proteção por senha</h4>
+          <ul>
+            <li>Na primeira gravação o aplicativo oferece definir uma senha.</li>
+            <li>A chave é derivada por <b>PBKDF2‑SHA256</b> com 210.000 iterações e o conteúdo é cifrado com <b>AES‑GCM de 256 bits</b>.</li>
+            <li>Pelo menu <b>⋮ → Senha do cofre</b> é possível definir, trocar ou remover a proteção; a mudança vale na próxima gravação.</li>
+            <li>Não existe recuperação: sem a senha, o conteúdo é irrecuperável.</li>
+          </ul>
+        </div>
+        <div>
+          <h4><svg class="icon sm"><use href="#i-power"></use></svg>Salvamento automático</h4>
+          <ul>
+            <li>Quando ativado no menu, grava as alterações a cada 45 segundos no destino já conhecido do cofre.</li>
+            <li>Só funciona depois da primeira gravação manual, quando o destino do arquivo já foi escolhido.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="guide-pane" id="g4">
+        <p>O aplicativo abre e grava cofres diretamente em um servidor <b>WebDAV</b> — o protocolo usado por Nextcloud, ownCloud, Synology e outros.</p>
+        <div>
+          <h4><svg class="icon sm"><use href="#i-cloud"></use></svg>Como conectar</h4>
+          <ul>
+            <li>Menu <b>⋮ → Conectar à nuvem</b>: informe o endereço, o usuário e a senha.</li>
+            <li>No Nextcloud o endereço costuma ser <code>https://seu-servidor/remote.php/dav/files/USUARIO/</code>.</li>
+            <li>Prefira uma <b>senha de aplicativo</b>, criada nas configurações de segurança da sua conta.</li>
+            <li>As credenciais só saem deste dispositivo para falar com o seu servidor; marcando "lembrar", ficam gravadas localmente.</li>
+          </ul>
+        </div>
+        <div>
+          <h4><svg class="icon sm"><use href="#i-folder-open"></use></svg>Abrir e salvar</h4>
+          <ul>
+            <li><b>Abrir cofre da nuvem</b> mostra um navegador de pastas; clique em um arquivo <code>.kanban</code> para carregá-lo.</li>
+            <li><b>Salvar cofre na nuvem</b> permite escolher a pasta e o nome do arquivo.</li>
+            <li>Depois de aberto pela nuvem, o botão de salvar grava de volta no mesmo endereço.</li>
+          </ul>
+        </div>
+        <div class="callout"><svg class="icon sm"><use href="#i-alert"></use></svg><p>No aplicativo de mesa (Tauri) a conexão é direta. Em um navegador comum, o servidor precisa liberar CORS para o endereço da página — caso contrário o navegador bloqueia a requisição.</p></div>
+      </div>
+
+      <div class="guide-pane" id="g5">
+        <ul class="shortcuts">
+          <li><span class="sc-keys"><kbd>Ctrl</kbd><kbd>N</kbd></span> Novo cofre</li>
+          <li><span class="sc-keys"><kbd>Ctrl</kbd><kbd>O</kbd></span> Abrir cofre</li>
+          <li><span class="sc-keys"><kbd>Ctrl</kbd><kbd>S</kbd></span> Salvar</li>
+          <li><span class="sc-keys"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>S</kbd></span> Salvar como</li>
+          <li><span class="sc-keys"><kbd>Ctrl</kbd><kbd>R</kbd></span> Cofres recentes</li>
+          <li><span class="sc-keys"><kbd>Ctrl</kbd><kbd>L</kbd></span> Nova coluna</li>
+          <li><span class="sc-keys"><kbd>Ctrl</kbd><kbd>K</kbd></span> Buscar cartões</li>
+          <li><span class="sc-keys"><kbd>Ctrl</kbd><kbd>1</kbd></span> Painel de anotações</li>
+          <li><span class="sc-keys"><kbd>Ctrl</kbd><kbd>2</kbd></span> Tema claro/escuro</li>
+          <li><span class="sc-keys"><kbd>Ctrl</kbd><kbd>3</kbd></span> Descrições</li>
+          <li><span class="sc-keys"><kbd>Ctrl</kbd><kbd>Q</kbd></span> Sair do aplicativo</li>
+          <li><span class="sc-keys"><kbd>F1</kbd></span> Este guia</li>
+          <li><span class="sc-keys"><kbd>Esc</kbd></span> Fechar janelas</li>
+        </ul>
+      </div>
+
+    </div>
+    <div class="modal-foot"><button class="mbtn primary" id="guideClose">Fechar</button></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     DIAGNÓSTICO — mostra falhas de JavaScript na própria tela.
+     Fica inerte enquanto tudo funciona.
+     ============================================================ -->
+<script>
+(function () {
+  function mostrar(titulo, msg, extra) {
+    try {
+      var caixa = document.getElementById("__erro_js__");
+      if (!caixa) {
+        caixa = document.createElement("pre");
+        caixa.id = "__erro_js__";
+        caixa.style.cssText =
+          "position:fixed;inset:0;z-index:999999;margin:0;padding:24px;" +
+          "background:#2B0B0B;color:#FFE8E8;font:12.5px/1.6 ui-monospace,monospace;" +
+          "white-space:pre-wrap;word-break:break-word;overflow:auto;";
+        (document.body || document.documentElement).appendChild(caixa);
+      }
+      caixa.textContent += titulo + "\n\n" + msg + "\n\n" + (extra || "") +
+        "\n\n----------------------------------------------------------\n\n";
+    } catch (e) { /* nada a fazer */ }
+  }
+  window.__kkErro = mostrar;
+
+  window.addEventListener("error", function (e) {
+    // Erros de origem opaca chegam como "Script error." na linha 0, sem
+    // informação útil. O try/catch do script principal cobre esse caso.
+    if (e.lineno === 0 && /Script error/i.test(String(e.message))) return;
+    mostrar("FALHA DE JAVASCRIPT", String(e.message),
+      "Linha " + e.lineno + ", coluna " + e.colno + "\n\n" +
+      (e.error && e.error.stack ? e.error.stack : "(sem pilha de chamadas)"));
+  });
+
+  window.addEventListener("unhandledrejection", function (e) {
+    var r = e.reason;
+    mostrar("PROMESSA REJEITADA SEM TRATAMENTO",
+      String(r && r.message ? r.message : r), (r && r.stack) ? r.stack : "");
+  });
+
+  // Se o script principal não chegar ao fim, relata o ambiente encontrado.
+  setTimeout(function () {
+    if (window.__KK_OK__) return;
+    var t = [];
+    t.push("window.__TAURI__          : " + (typeof window.__TAURI__));
+    if (window.__TAURI__) {
+      try { t.push("  chaves disponíveis     : " + Object.keys(window.__TAURI__).join(", ")); }
+      catch (e) { t.push("  (não foi possível listar as chaves)"); }
+    }
+    t.push("localStorage              : " + (function(){ try { localStorage.setItem("__t","1"); localStorage.removeItem("__t"); return "ok"; } catch (e) { return "BLOQUEADO — " + e.name + ": " + e.message; } })());
+    t.push("sessionStorage            : " + (function(){ try { sessionStorage.setItem("__t","1"); sessionStorage.removeItem("__t"); return "ok"; } catch (e) { return "BLOQUEADO — " + e.name + ": " + e.message; } })());
+    t.push("indexedDB                 : " + (typeof indexedDB));
+    t.push("crypto.subtle             : " + (window.crypto && window.crypto.subtle ? "ok" : "AUSENTE"));
+    t.push("origem do documento       : " + location.origin + "  (" + location.protocol + ")");
+    t.push("contexto seguro           : " + window.isSecureContext);
+    t.push("elemento #board existe    : " + !!document.getElementById("board"));
+    t.push("elemento #startScreen     : " + !!document.getElementById("startScreen"));
+    mostrar("INICIALIZAÇÃO NÃO CONCLUÍDA",
+      "O script principal foi carregado mas não chegou ao fim.",
+      t.join("\n"));
+  }, 1500);
+})();
+</script>
+
+<script>
+"use strict";
+/* ============================================================
+   KANBAN KLIPPEL v1.0.0 — LÓGICA DO APLICATIVO
+   ============================================================ */
+try {
+
+/* ---------- Constantes ---------- */
+const APP_VERSION = "1.0.0";
+const FILE_EXT    = ".kanban";
+const PBKDF2_ITER = 210000;
+
+const COL_COLORS  = ["#084D6E","#0A6392","#0F766E","#15803D","#B45309","#B91C1C","#6D28D9","#475569"];
+const ITEM_COLORS = ["#084D6E","#0A6392","#0F766E","#15803D","#B45309","#B91C1C","#6D28D9","#475569"];
+const NOTE_COLORS = ["#FFF3B0","#FFD6DF","#CDEFC6","#CFE4FA","#FFE0B8","#E3D7FB"];
+const URGENCY = [
+  { key:"none", label:"Nenhuma", color:null },
+  { key:"low",  label:"Baixa",   color:"#15803D" },
+  { key:"med",  label:"Média",   color:"#B45309" },
+  { key:"high", label:"Alta",    color:"#B91C1C" }
+];
+
+const LS_THEME     = "kanbanklippel.theme";
+const LS_NOTES     = "kanbanklippel.notesOpen";
+const LS_AUTOSAVE  = "kanbanklippel.autosave";
+const LS_RECENTS   = "kanbanklippel.recents.v2";
+const LS_DAV       = "kanbanklippel.dav.v1";
+const IDB_NAME     = "kanbanklippel";
+const IDB_STORE    = "handles";
+
+/* ---------- Estado ---------- */
+let state  = { name:"Sem título", columns:[], notes:[], version:APP_VERSION, updatedAt:null };
+let target = { kind:null, path:null, handle:null, fileName:null, davPath:null, recentId:null };
+
+let currentPassword  = null;   // senha em memória (null = cofre sem senha)
+let passwordDecided  = false;  // já perguntamos a senha para este cofre?
+let dirty            = false;
+let allVisible       = true;
+let query            = "";
+let autosaveOn       = false;
+let autosaveTimer    = null;
+let uidCounter       = 0;
+let composerCol      = null;   // coluna com o criador rápido aberto
+let appReady         = false;  // init concluído: já se pode redesenhar
+
+function uid(p) { return p + "_" + Date.now().toString(36) + "_" + (uidCounter++); }
+
+/* ============================================================
+   UTILIDADES
+   ============================================================ */
+function el(tag, props = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const key in props) {
+    const v = props[key];
+    if (v === null || v === undefined) continue;
+    if (key === "class") node.className = v;
+    else if (key === "text") node.textContent = v;
+    else if (key === "html") node.innerHTML = v;
+    else if (key.startsWith("on")) node.addEventListener(key.slice(2).toLowerCase(), v);
+    else node.setAttribute(key, v);
+  }
+  for (const c of children) {
+    if (c === null || c === undefined || c === false) continue;
+    node.append(c.nodeType ? c : document.createTextNode(c));
+  }
+  return node;
+}
+function svgIcon(name, cls) {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("class", "icon" + (cls ? " " + cls : ""));
+  const use = document.createElementNS(NS, "use");
+  use.setAttribute("href", "#" + name);
+  use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", "#" + name);
+  svg.append(use);
+  return svg;
+}
+function setIcon(btn, name) {
+  const use = btn.querySelector("use");
+  if (!use) return;
+  use.setAttribute("href", "#" + name);
+  use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", "#" + name);
+}
+function $(id) { return document.getElementById(id); }
+function findColumn(id) { return state.columns.find(c => c.id === id); }
+function findItemAnywhere(itemId) {
+  for (const c of state.columns) { const it = c.items.find(x => x.id === itemId); if (it) return { col: c, item: it }; }
+  return null;
+}
+function notesForItem(itemId) { return state.notes.filter(n => n.itemId === itemId); }
+
+// Converte a cor da coluna em uma tinta translúcida para o cabeçalho.
+function hexToRgba(hex, a) {
+  if (!hex) return "transparent";
+  let h = String(hex).replace("#", "").trim();
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return "transparent";
+  const n = parseInt(h, 16);
+  return "rgba(" + ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + a + ")";
+}
+function isDark() { return document.documentElement.getAttribute("data-theme") === "dark"; }
+function flashElement(node) {
+  if (!node) return;
+  node.classList.remove("flash");
+  void node.offsetWidth;
+  node.classList.add("flash");
+  setTimeout(() => node.classList.remove("flash"), 1600);
+}
+function focusCard(itemId) {
+  if (!findItemAnywhere(itemId)) { toast("O cartão vinculado não existe mais.", "err"); return; }
+  if (query) { query = ""; searchInput.value = ""; $("searchBox").classList.remove("has-value"); render(); }
+  const node = board.querySelector('[data-item="' + itemId + '"]');
+  if (node) { node.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" }); flashElement(node); }
+}
+function focusNote(noteId) {
+  toggleNotesPanel(true);
+  const idx = state.notes.findIndex(n => n.id === noteId);
+  if (idx === -1) return;
+  const nodes = notesList.querySelectorAll(".note");
+  const node = nodes[idx];
+  if (node) { node.scrollIntoView({ behavior: "smooth", block: "center" }); flashElement(node); }
+}
+
+function pad2(n) { return String(n).padStart(2, "0"); }
+function todayISO() { const d = new Date(); return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate()); }
+function fmtDueShort(iso) { const p = iso.split("-"); return p[2] + "/" + p[1]; }
+function dueClass(iso) { if (!iso) return ""; const t = todayISO(); return iso < t ? "late" : (iso === t ? "today" : ""); }
+function fmtStamp(ms) {
+  const d = new Date(ms), now = new Date();
+  const same = d.toDateString() === now.toDateString();
+  const yest = new Date(now.getTime() - 86400000).toDateString() === d.toDateString();
+  const hora = pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  if (same) return "hoje às " + hora;
+  if (yest) return "ontem às " + hora;
+  return pad2(d.getDate()) + "/" + pad2(d.getMonth()+1) + "/" + d.getFullYear();
+}
+
+/* ---------- Avisos ---------- */
+const toastsBox = $("toasts");
+function toast(msg, kind) {
+  const icon = kind === "ok" ? "i-check" : kind === "err" ? "i-alert" : "i-info";
+  const t = el("div", { class: "toast" + (kind ? " " + kind : "") }, svgIcon(icon, "sm"), el("span", { text: msg }));
+  toastsBox.append(t);
+  setTimeout(() => { t.style.opacity = "0"; t.style.transition = "opacity .25s"; setTimeout(() => t.remove(), 260); }, kind === "err" ? 5200 : 2800);
+}
+
+/* ---------- Confirmação ---------- */
+const confirmOverlay = $("confirmOverlay");
+let confirmResolve = null;
+function askConfirm(title, text, okLabel, danger) {
+  return new Promise(res => {
+    confirmResolve = res;
+    $("confirmTitle").textContent = title;
+    $("confirmText").textContent = text;
+    const ok = $("confirmOk");
+    ok.textContent = okLabel || "Confirmar";
+    ok.className = "mbtn " + (danger === false ? "primary" : "danger");
+    confirmOverlay.classList.add("open");
+    ok.focus();
+  });
+}
+function resolveConfirm(v) { if (confirmResolve) { const r = confirmResolve; confirmResolve = null; confirmOverlay.classList.remove("open"); r(v); } }
+$("confirmOk").addEventListener("click", () => resolveConfirm(true));
+$("confirmCancel").addEventListener("click", () => resolveConfirm(false));
+
+/* ---------- Estado "salvo / não salvo" ---------- */
+function touch() { if (!dirty) { dirty = true; updateStatus(); } }
+function markSaved() { dirty = false; updateStatus(); }
+function updateStatus() {
+  const s = $("status");
+  s.classList.toggle("dirty", dirty);
+  $("statusText").textContent = dirty ? "Não salvo" : (target.kind ? "Salvo" : "Novo");
+  s.setAttribute("data-tip", dirty ? "Há alterações não gravadas" : (target.kind ? describeTarget() : "Cofre ainda não gravado"));
+}
+function describeTarget() {
+  if (target.kind === "tauri")  return target.path;
+  if (target.kind === "fsa")    return target.fileName || "Arquivo local";
+  if (target.kind === "webdav") return "Nuvem: " + (target.davPath || "");
+  return "Cofre ainda não gravado";
+}
+
+/* ============================================================
+   PREFERÊNCIAS PERSISTIDAS
+   ============================================================ */
+function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
+function lsDel(k) { try { localStorage.removeItem(k); } catch {} }
+
+function applyTheme(mode) {
+  document.documentElement.setAttribute("data-theme", mode);
+  const dark = mode === "dark";
+  setIcon($("btnTheme"), dark ? "i-sun" : "i-moon");
+  setIcon($("startTheme"), dark ? "i-sun" : "i-moon");
+  const label = dark ? "Modo claro" : "Modo escuro";
+  $("btnTheme").setAttribute("data-tip", label);
+  $("btnTheme").setAttribute("aria-label", label);
+  lsSet(LS_THEME, mode);
+  if (appReady) render();   // as tintas das colunas dependem do tema
+}
+function toggleTheme() {
+  applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+}
+
+/* ============================================================
+   COFRES RECENTES (localStorage + IndexedDB para handles)
+   ============================================================ */
+function idbOpen() {
+  return new Promise((res, rej) => {
+    if (!window.indexedDB) return rej(new Error("IndexedDB indisponível"));
+    const r = indexedDB.open(IDB_NAME, 1);
+    r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains(IDB_STORE)) r.result.createObjectStore(IDB_STORE); };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idbSet(key, val) {
+  try {
+    const db = await idbOpen();
+    await new Promise((res, rej) => {
+      const t = db.transaction(IDB_STORE, "readwrite");
+      t.objectStore(IDB_STORE).put(val, key);
+      t.oncomplete = res; t.onerror = () => rej(t.error);
+    });
+  } catch {}
+}
+async function idbGet(key) {
+  try {
+    const db = await idbOpen();
+    return await new Promise((res, rej) => {
+      const t = db.transaction(IDB_STORE, "readonly");
+      const q = t.objectStore(IDB_STORE).get(key);
+      q.onsuccess = () => res(q.result || null); q.onerror = () => rej(q.error);
+    });
+  } catch { return null; }
+}
+async function idbDel(key) {
+  try {
+    const db = await idbOpen();
+    await new Promise((res) => {
+      const t = db.transaction(IDB_STORE, "readwrite");
+      t.objectStore(IDB_STORE).delete(key); t.oncomplete = res; t.onerror = res;
+    });
+  } catch {}
+}
+
+function loadRecents() { try { return JSON.parse(lsGet(LS_RECENTS)) || []; } catch { return []; } }
+function storeRecents(list) { lsSet(LS_RECENTS, JSON.stringify(list.slice(0, 14))); }
+
+function recentSignature(entry) {
+  if (entry.kind === "tauri")  return "tauri:" + entry.path;
+  if (entry.kind === "webdav") return "webdav:" + entry.davUrl + "|" + entry.davPath;
+  return "fsa:" + (entry.fileName || "");
+}
+async function rememberRecent() {
+  if (!target.kind || target.kind === "download") return;
+  const entry = {
+    id: target.recentId || uid("rec"),
+    kind: target.kind,
+    name: state.name || "Sem título",
+    path: target.path || null,
+    fileName: target.fileName || null,
+    davPath: target.davPath || null,
+    davUrl: target.kind === "webdav" ? dav.url : null,
+    encrypted: !!currentPassword,
+    ts: Date.now()
+  };
+  const sig = recentSignature(entry);
+  let list = loadRecents().filter(r => recentSignature(r) !== sig);
+  const old = loadRecents().find(r => recentSignature(r) === sig);
+  if (old && old.id !== entry.id && old.kind === "fsa") await idbDel(old.id);
+  list.unshift(entry);
+  const removed = list.slice(14);
+  for (const r of removed) if (r.kind === "fsa") await idbDel(r.id);
+  storeRecents(list);
+  target.recentId = entry.id;
+  if (target.kind === "fsa" && target.handle) await idbSet(entry.id, target.handle);
+  renderRecents();
+}
+async function forgetRecent(id) {
+  const list = loadRecents();
+  const entry = list.find(r => r.id === id);
+  if (entry && entry.kind === "fsa") await idbDel(id);
+  storeRecents(list.filter(r => r.id !== id));
+  renderRecents();
+}
+
+const recentsList = $("recentsList");
+function recentKindInfo(kind) {
+  if (kind === "webdav") return { icon: "i-cloud", label: "Nuvem WebDAV" };
+  if (kind === "tauri")  return { icon: "i-file", label: "Arquivo local" };
+  return { icon: "i-file", label: "Arquivo local" };
+}
+function renderRecents() {
+  const list = loadRecents();
+  recentsList.innerHTML = "";
+  $("clearRecents").style.display = list.length ? "" : "none";
+  if (!list.length) {
+    recentsList.append(el("div", { class: "recents-empty" },
+      el("p", { class: "modal-text", text: "Os cofres que você abrir aparecem aqui, prontos para retomar com um clique." })));
+    return;
+  }
+  list.forEach(r => {
+    const info = recentKindInfo(r.kind);
+    const where = r.kind === "webdav" ? ("/" + (r.davPath || "")) : (r.path || r.fileName || "");
+    const row = el("button", {
+        class: "recent", type: "button", title: info.label + ": " + where,
+        onClick: () => openRecent(r.id)
+      },
+      el("span", { class: "r-icon" }, svgIcon(info.icon)),
+      el("span", { class: "r-body" },
+        el("span", { class: "r-name" },
+          el("span", { class: "txt", text: r.name || "Sem título" }),
+          r.encrypted ? svgIcon("i-lock", "sm") : null),
+        el("span", { class: "r-where", text: where })
+      ),
+      el("span", { class: "r-when", text: fmtStamp(r.ts) })
+    );
+    const del = el("button", {
+      class: "iconbtn danger r-remove", type: "button", "aria-label": "Remover da lista", "data-tip": "Remover da lista",
+      onClick: (e) => { e.stopPropagation(); forgetRecent(r.id); }
+    }, svgIcon("i-x", "sm"));
+    const wrap = el("div", { class: "recent-row", style: "display:flex;align-items:center;gap:6px" }, row, del);
+    recentsList.append(wrap);
+  });
+}
+$("clearRecents").addEventListener("click", async () => {
+  if (!(await askConfirm("Limpar lista", "Remover todos os atalhos de cofres recentes? Os arquivos em si não serão apagados.", "Limpar"))) return;
+  for (const r of loadRecents()) if (r.kind === "fsa") await idbDel(r.id);
+  storeRecents([]); renderRecents(); toast("Lista de recentes limpa.", "ok");
+});
+
+/* ============================================================
+   RENDERIZAÇÃO DO QUADRO
+   ============================================================ */
+const board = $("board");
+
+function matchesQuery(item) {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  return (item.title || "").toLowerCase().includes(q) || (item.description || "").toLowerCase().includes(q);
+}
+
+function render() {
+  $("vaultName").value = state.name;
+  renderNotes();
+  board.innerHTML = "";
+  if (state.columns.length === 0) {
+    board.append(el("div", { class: "empty" },
+      el("div", { class: "glyph" }, svgIcon("i-layout", "lg")),
+      el("h2", { text: "Comece pelas colunas" }),
+      el("p", { text: "Uma coluna é uma etapa do trabalho: a fazer, em andamento, concluído. Depois é só preencher com cartões." }),
+      el("button", { class: "mbtn primary", onClick: () => openColModal() }, svgIcon("i-plus", "sm"), "Nova coluna")
+    ));
+    return;
+  }
+  state.columns.forEach((col, ci) => board.append(renderColumn(col, ci)));
+
+  // Redesenhar recria o DOM: devolve o cursor ao criador que estava aberto.
+  if (composerCol) {
+    const campo = board.querySelector(".col-foot.composing .composer-input");
+    if (campo) campo.focus();
+  }
+}
+
+function renderColumn(col, colIndex) {
+  const columnEl = el("div", { class: "column", "data-colid": col.id });
+  const lastCol = state.columns.length - 1;
+  const visible = col.items.filter(matchesQuery);
+
+  const stripe = el("div", { class: "col-stripe" });
+  stripe.style.background = col.color;
+
+  const head = el("div", { class: "col-head", ondblclick: () => openColModal(col.id) },
+    svgIcon("i-grip", "sm col-grip"),
+    el("span", { class: "col-title", text: col.name, title: col.name }),
+    el("span", { class: "col-count", text: query ? (visible.length + "/" + col.items.length) : String(col.items.length) }),
+    el("div", { class: "col-actions" },
+      el("button", { class: "minibtn", "aria-label": "Mover coluna para a esquerda", title: "Mover para a esquerda",
+        disabled: colIndex === 0 ? "" : null, onClick: () => moveColumn(col.id, -1) }, svgIcon("i-chev-left", "sm")),
+      el("button", { class: "minibtn", "aria-label": "Mover coluna para a direita", title: "Mover para a direita",
+        disabled: colIndex === lastCol ? "" : null, onClick: () => moveColumn(col.id, 1) }, svgIcon("i-chev-right", "sm")),
+      el("button", { class: "minibtn", "aria-label": "Editar coluna", title: "Editar coluna",
+        onClick: () => openColModal(col.id) }, svgIcon("i-pencil", "sm")),
+      el("button", { class: "minibtn danger", "aria-label": "Excluir coluna", title: "Excluir coluna",
+        onClick: () => deleteColumn(col.id) }, svgIcon("i-trash", "sm"))
+    )
+  );
+  // A cor da coluna tinge o próprio cabeçalho: identifica a raia de relance.
+  head.style.background = hexToRgba(col.color, isDark() ? 0.20 : 0.10);
+  head.addEventListener("pointerdown", (e) => pointerStart(e, "column", { colId: col.id }, columnEl));
+
+  const list = el("div", { class: "col-list", "data-col": col.id });
+  if (visible.length === 0) {
+    list.append(el("div", { class: "col-empty",
+      text: query ? "Nenhum cartão corresponde à busca." : "Nada aqui ainda." }));
+  } else {
+    visible.forEach(item => list.append(renderCard(col, colIndex, item, col.items.indexOf(item))));
+  }
+
+  /* ---------- Criador rápido: digitar e pressionar Enter basta ---------- */
+  const foot = el("div", { class: "col-foot" });
+  const campo = el("textarea", { class: "composer-input", rows: "2",
+    placeholder: "Título do cartão", "aria-label": "Título do novo cartão" });
+
+  function abrir() { composerCol = col.id; foot.classList.add("composing"); campo.focus(); }
+  function fechar() { composerCol = null; foot.classList.remove("composing"); campo.value = ""; }
+  function criar() {
+    const titulo = campo.value.trim();
+    if (!titulo) { campo.focus(); return; }
+    col.items.push({ id: uid("item"), title: titulo, description: "", due: null,
+                     descVisible: allVisible, urgency: "none", color: null });
+    campo.value = "";
+    composerCol = col.id;        // segue aberto para o próximo cartão
+    touch(); render();
+  }
+  function detalhar() {
+    const titulo = campo.value.trim();
+    fechar(); render();
+    openItemModal(col.id, null, titulo);
+  }
+
+  campo.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); criar(); }
+    else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); fechar(); }
+  });
+
+  const trigger = el("button", { class: "add-item", onClick: abrir },
+    svgIcon("i-plus", "sm"), "Adicionar item");
+
+  const composer = el("div", { class: "composer" }, campo,
+    el("div", { class: "composer-actions" },
+      el("button", { class: "mbtn primary", style: "padding:8px 15px;font-size:13px", onClick: criar }, "Adicionar"),
+      el("button", { class: "minibtn", title: "Abrir com prazo, urgência e cor",
+        "aria-label": "Mais opções", onClick: detalhar }, svgIcon("i-pencil", "sm")),
+      el("span", { class: "composer-hint", text: "Enter adiciona" }),
+      el("button", { class: "minibtn", title: "Fechar", "aria-label": "Fechar",
+        onClick: fechar }, svgIcon("i-x", "sm"))
+    ));
+
+  foot.append(trigger, composer);
+  if (composerCol === col.id) foot.classList.add("composing");
+
+  columnEl.append(stripe, head, list, foot);
+  return columnEl;
+}
+
+function renderCard(col, colIndex, item, itemIndex) {
+  const hasDesc = item.description && item.description.trim().length > 0;
+  const card = el("div", {
+    class: "card" + (hasDesc && !item.descVisible ? " collapsed" : "") + (item.color ? " tinted" : ""),
+    "data-item": item.id, "data-col": col.id
+  });
+  if (item.color) {
+    const tint = el("span", { class: "tint" });
+    tint.style.background = item.color;
+    card.append(tint);
+  }
+
+  const chips = [];
+  if (item.urgency && item.urgency !== "none") {
+    const u = URGENCY.find(x => x.key === item.urgency);
+    if (u && u.color) {
+      const pill = el("span", { class: "chip urg" }, svgIcon("i-flag"), el("span", { text: u.label }));
+      pill.style.background = u.color;
+      chips.push(pill);
+    }
+  }
+  if (item.due) {
+    chips.push(el("span", { class: "chip due " + dueClass(item.due), title: "Prazo: " + item.due },
+      svgIcon("i-calendar"), el("span", { text: fmtDueShort(item.due) })));
+  }
+  const linkedNotes = notesForItem(item.id);
+  if (linkedNotes.length) {
+    chips.push(el("button", { class: "chip notelink", type: "button",
+      title: linkedNotes.length === 1 ? "Ver a anotação vinculada" : "Ver as anotações vinculadas",
+      onClick: () => focusNote(linkedNotes[0].id) },
+      svgIcon("i-note"), el("span", { text: String(linkedNotes.length) })));
+  }
+  if (chips.length) card.append(el("div", { class: "chips" }, ...chips));
+
+  const top = el("div", { class: "card-top" }, el("div", { class: "card-title", text: item.title }));
+  if (hasDesc) {
+    top.append(el("button", {
+      class: "desc-toggle", title: item.descVisible ? "Ocultar descrição" : "Mostrar descrição",
+      "aria-label": item.descVisible ? "Ocultar descrição" : "Mostrar descrição",
+      onClick: () => toggleDesc(col.id, item.id)
+    }, svgIcon("i-chev-down", "sm")));
+  }
+  card.append(top);
+  if (hasDesc) card.append(el("div", { class: "card-desc", text: item.description }));
+
+  const lastItem = col.items.length - 1;
+  const lastCol = state.columns.length - 1;
+  card.append(el("div", { class: "card-controls" },
+    el("button", { class: "minibtn", title: "Mover para a coluna anterior", "aria-label": "Mover para a coluna anterior",
+      disabled: colIndex === 0 ? "" : null, onClick: () => moveItemHorizontal(col.id, item.id, -1) }, svgIcon("i-chev-left", "sm")),
+    el("button", { class: "minibtn", title: "Mover para cima", "aria-label": "Mover para cima",
+      disabled: itemIndex === 0 ? "" : null, onClick: () => moveItemVertical(col.id, item.id, -1) }, svgIcon("i-chev-up", "sm")),
+    el("button", { class: "minibtn", title: "Mover para baixo", "aria-label": "Mover para baixo",
+      disabled: itemIndex === lastItem ? "" : null, onClick: () => moveItemVertical(col.id, item.id, 1) }, svgIcon("i-chev-down", "sm")),
+    el("button", { class: "minibtn", title: "Mover para a próxima coluna", "aria-label": "Mover para a próxima coluna",
+      disabled: colIndex === lastCol ? "" : null, onClick: () => moveItemHorizontal(col.id, item.id, 1) }, svgIcon("i-chev-right", "sm")),
+    el("span", { class: "spacer" }),
+    el("button", { class: "minibtn", title: "Editar item", "aria-label": "Editar item",
+      onClick: () => openItemModal(col.id, item.id) }, svgIcon("i-pencil", "sm")),
+    el("button", { class: "minibtn danger", title: "Excluir item", "aria-label": "Excluir item",
+      onClick: () => deleteItem(col.id, item.id) }, svgIcon("i-trash", "sm"))
+  ));
+
+  card.addEventListener("pointerdown", (e) => pointerStart(e, "item", { colId: col.id, itemId: item.id }, card));
+  return card;
+}
+
+/* ============================================================
+   ARRASTAR E SOLTAR (pointer events — estável no WebKitGTK)
+   ============================================================ */
+let drag = null;
+let indicator = null;
+
+function pointerStart(e, kind, ids, sourceEl) {
+  if (e.button !== 0) return;
+  if (e.target.closest("button, input, textarea, a")) return;
+  drag = { kind, ids, sourceEl, startX: e.clientX, startY: e.clientY, active: false, target: null, ghost: null };
+  window.addEventListener("pointermove", pointerMove);
+  window.addEventListener("pointerup", pointerEnd, { once: true });
+}
+function pointerMove(e) {
+  if (!drag) return;
+  if (!drag.active) {
+    if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 5) return;
+    beginDrag();
+  }
+  e.preventDefault();
+  drag.ghost.style.left = (e.clientX - drag.offX) + "px";
+  drag.ghost.style.top  = (e.clientY - drag.offY) + "px";
+  updateDropTarget(e);
+}
+function beginDrag() {
+  drag.active = true;
+  const rect = drag.sourceEl.getBoundingClientRect();
+  drag.offX = drag.startX - rect.left;
+  drag.offY = drag.startY - rect.top;
+  const ghost = drag.sourceEl.cloneNode(true);
+  ghost.classList.add("drag-ghost");
+  ghost.style.width = rect.width + "px";
+  ghost.style.left = rect.left + "px";
+  ghost.style.top = rect.top + "px";
+  document.body.append(ghost);
+  drag.ghost = ghost;
+  drag.sourceEl.classList.add("dragging");
+  document.body.classList.add("dragging-active");
+}
+function getIndicator(orient) {
+  if (!indicator) indicator = document.createElement("div");
+  indicator.className = "drop-indicator " + orient;
+  return indicator;
+}
+function removeIndicator() { if (indicator && indicator.parentNode) indicator.parentNode.removeChild(indicator); }
+
+function updateDropTarget(e) {
+  drag.ghost.style.display = "none";
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  drag.ghost.style.display = "";
+  removeIndicator();
+  drag.target = null;
+  if (drag.kind === "item") {
+    const list = under && under.closest(".col-list");
+    if (!list) return;
+    const after = getCardAfter(list, e.clientY);
+    drag.target = { colId: list.getAttribute("data-col"), beforeItemId: after ? after.getAttribute("data-item") : null };
+    const ind = getIndicator("h");
+    if (after) list.insertBefore(ind, after); else list.append(ind);
+  } else {
+    const inBoard = under && (under.closest(".column") || under.closest(".board"));
+    if (!inBoard) return;
+    const after = getColumnAfter(board, e.clientX);
+    drag.target = { beforeColId: after ? after.getAttribute("data-colid") : null };
+    const ind = getIndicator("v");
+    if (after) board.insertBefore(ind, after); else board.append(ind);
+  }
+}
+function getCardAfter(list, y) {
+  const cards = [...list.querySelectorAll(".card:not(.dragging)")];
+  for (const c of cards) { const b = c.getBoundingClientRect(); if (y < b.top + b.height / 2) return c; }
+  return null;
+}
+function getColumnAfter(boardEl, x) {
+  const cols = [...boardEl.querySelectorAll(".column:not(.dragging)")];
+  for (const c of cols) { const b = c.getBoundingClientRect(); if (x < b.left + b.width / 2) return c; }
+  return null;
+}
+function pointerEnd() {
+  window.removeEventListener("pointermove", pointerMove);
+  const d = drag;
+  drag = null;
+  if (d && d.active) {
+    if (d.kind === "item" && d.target) { moveItemToTarget(d.ids.colId, d.ids.itemId, d.target.colId, d.target.beforeItemId); touch(); }
+    else if (d.kind === "column" && d.target) { moveColumnToTarget(d.ids.colId, d.target.beforeColId); touch(); }
+  }
+  removeIndicator();
+  if (d && d.ghost && d.ghost.parentNode) d.ghost.parentNode.removeChild(d.ghost);
+  document.body.classList.remove("dragging-active");
+  if (d && d.active) render();
+}
+function moveItemToTarget(srcColId, itemId, tgtColId, beforeItemId) {
+  const src = findColumn(srcColId);
+  if (!src) return;
+  const idx = src.items.findIndex(i => i.id === itemId);
+  if (idx === -1) return;
+  const [moved] = src.items.splice(idx, 1);
+  const tgt = findColumn(tgtColId);
+  if (!tgt) { src.items.splice(idx, 0, moved); return; }
+  if (beforeItemId) {
+    const bi = tgt.items.findIndex(i => i.id === beforeItemId);
+    tgt.items.splice(bi === -1 ? tgt.items.length : bi, 0, moved);
+  } else tgt.items.push(moved);
+}
+function moveColumnToTarget(srcColId, beforeColId) {
+  const i = state.columns.findIndex(c => c.id === srcColId);
+  if (i === -1) return;
+  const [moved] = state.columns.splice(i, 1);
+  if (beforeColId) {
+    const bi = state.columns.findIndex(c => c.id === beforeColId);
+    state.columns.splice(bi === -1 ? state.columns.length : bi, 0, moved);
+  } else state.columns.push(moved);
+}
+
+/* ============================================================
+   AÇÕES SOBRE ITENS E COLUNAS
+   ============================================================ */
+function moveItemVertical(colId, itemId, dir) {
+  const col = findColumn(colId);
+  const i = col.items.findIndex(x => x.id === itemId), j = i + dir;
+  if (j < 0 || j >= col.items.length) return;
+  const tmp = col.items[i]; col.items[i] = col.items[j]; col.items[j] = tmp;
+  touch(); render();
+}
+function moveItemHorizontal(colId, itemId, dir) {
+  const ci = state.columns.findIndex(c => c.id === colId), cj = ci + dir;
+  if (cj < 0 || cj >= state.columns.length) return;
+  const col = state.columns[ci];
+  const i = col.items.findIndex(x => x.id === itemId);
+  if (i === -1) return;
+  const [moved] = col.items.splice(i, 1);
+  state.columns[cj].items.push(moved);
+  touch(); render();
+}
+function moveColumn(colId, dir) {
+  const i = state.columns.findIndex(c => c.id === colId), j = i + dir;
+  if (j < 0 || j >= state.columns.length) return;
+  const tmp = state.columns[i]; state.columns[i] = state.columns[j]; state.columns[j] = tmp;
+  touch(); render();
+}
+function toggleDesc(colId, itemId) {
+  const item = findColumn(colId).items.find(x => x.id === itemId);
+  item.descVisible = !item.descVisible;
+  touch(); render();
+}
+async function deleteItem(colId, itemId) {
+  const col = findColumn(colId);
+  const it = col.items.find(x => x.id === itemId);
+  if (!it) return;
+  if (!(await askConfirm("Excluir item", "Excluir o item “" + it.title + "”? Esta ação não pode ser desfeita.", "Excluir"))) return;
+  col.items = col.items.filter(x => x.id !== itemId);
+  state.notes.forEach(n => { if (n.itemId === itemId) n.itemId = null; });
+  touch(); render();
+}
+async function deleteColumn(colId) {
+  const col = findColumn(colId);
+  if (!col) return;
+  const msg = col.items.length
+    ? "Excluir a coluna “" + col.name + "” e seus " + col.items.length + " item(ns)?"
+    : "Excluir a coluna “" + col.name + "”?";
+  if (!(await askConfirm("Excluir coluna", msg, "Excluir"))) return;
+  const orphans = col.items.map(i => i.id);
+  state.notes.forEach(n => { if (orphans.indexOf(n.itemId) !== -1) n.itemId = null; });
+  state.columns = state.columns.filter(c => c.id !== colId);
+  touch(); render();
+}
+
+/* ============================================================
+   MODAL: COLUNA (criar e editar)
+   ============================================================ */
+const colOverlay = $("colOverlay");
+const colNameInput = $("colNameInput");
+const colSwatches = $("colSwatches");
+let selectedColColor = COL_COLORS[0];
+let editingColId = null;
+
+function buildColSwatches() {
+  colSwatches.innerHTML = "";
+  COL_COLORS.forEach(hex => {
+    const sw = el("span", { class: "sw", title: hex, onClick: () => { selectedColColor = hex; syncColSwatches(); } });
+    sw.style.background = hex; colSwatches.append(sw);
+  });
+  colSwatches.append(el("input", { type: "color", value: selectedColColor, title: "Cor personalizada",
+    onInput: (e) => { selectedColColor = e.target.value; syncColSwatches(); } }));
+  syncColSwatches();
+}
+function syncColSwatches() {
+  [...colSwatches.querySelectorAll(".sw")].forEach(sw => sw.classList.toggle("sel", sw.title.toLowerCase() === selectedColColor.toLowerCase()));
+  const custom = colSwatches.querySelector('input[type="color"]');
+  if (custom) custom.value = selectedColColor;
+}
+function openColModal(colId) {
+  editingColId = colId || null;
+  const editing = !!colId;
+  const col = editing ? findColumn(colId) : null;
+  $("colModalTitle").textContent = editing ? "Editar coluna" : "Nova coluna";
+  $("colSaveLabel").textContent = editing ? "Salvar" : "Criar coluna";
+  selectedColColor = editing ? (col.color || COL_COLORS[0]) : COL_COLORS[0];
+  colNameInput.value = editing ? col.name : "";
+  buildColSwatches();
+  colOverlay.classList.add("open");
+  colNameInput.focus(); colNameInput.select();
+}
+$("btnAddCol").addEventListener("click", () => openColModal());
+$("colCancel").addEventListener("click", () => colOverlay.classList.remove("open"));
+$("colSave").addEventListener("click", () => {
+  const name = colNameInput.value.trim() || "Nova coluna";
+  if (editingColId) {
+    const col = findColumn(editingColId);
+    if (col) { col.name = name; col.color = selectedColColor; }
+  } else {
+    state.columns.push({ id: uid("col"), name, color: selectedColColor, items: [] });
+  }
+  colOverlay.classList.remove("open");
+  touch(); render();
+});
+colNameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") $("colSave").click(); });
+
+/* ============================================================
+   MODAL: ITEM (criar e editar)
+   ============================================================ */
+const itemOverlay = $("itemOverlay");
+const itemTitleInput = $("itemTitleInput");
+const itemDescInput = $("itemDescInput");
+const itemDueInput = $("itemDueInput");
+const urgOptions = $("urgOptions");
+const itemSwatches = $("itemSwatches");
+let itemTarget = { colId: null, itemId: null };
+let selectedUrgency = "none";
+let selectedItemColor = null;
+
+function buildUrgOptions() {
+  urgOptions.innerHTML = "";
+  URGENCY.forEach(u => urgOptions.append(el("button", { type: "button", class: "urg-btn", text: u.label,
+    onClick: () => { selectedUrgency = u.key; syncUrg(); } })));
+  syncUrg();
+}
+function syncUrg() {
+  [...urgOptions.children].forEach((b, idx) => {
+    const u = URGENCY[idx], sel = u.key === selectedUrgency;
+    b.className = "urg-btn" + (sel ? " sel" : "") + (sel && !u.color ? " none" : "");
+    b.style.background = sel && u.color ? u.color : "";
+  });
+}
+function buildItemSwatches() {
+  itemSwatches.innerHTML = "";
+  itemSwatches.append(el("span", { class: "sw sw-none", title: "Sem cor",
+    onClick: () => { selectedItemColor = null; syncItemSwatches(); } }));
+  ITEM_COLORS.forEach(hex => {
+    const sw = el("span", { class: "sw", title: hex, onClick: () => { selectedItemColor = hex; syncItemSwatches(); } });
+    sw.style.background = hex; itemSwatches.append(sw);
+  });
+  syncItemSwatches();
+}
+function syncItemSwatches() {
+  [...itemSwatches.children].forEach(sw => {
+    const isNone = sw.classList.contains("sw-none");
+    sw.classList.toggle("sel", isNone ? selectedItemColor === null : sw.title === selectedItemColor);
+  });
+}
+function openItemModal(colId, itemId, tituloInicial) {
+  itemTarget = { colId, itemId: itemId || null };
+  const editing = !!itemId;
+  $("itemModalTitle").textContent = editing ? "Editar item" : "Novo item";
+  $("itemSaveLabel").textContent = editing ? "Salvar" : "Adicionar";
+  if (editing) {
+    const it = findColumn(colId).items.find(x => x.id === itemId);
+    itemTitleInput.value = it.title; itemDescInput.value = it.description || "";
+    itemDueInput.value = it.due || "";
+    selectedUrgency = it.urgency || "none"; selectedItemColor = it.color || null;
+  } else {
+    itemTitleInput.value = tituloInicial || ""; itemDescInput.value = ""; itemDueInput.value = "";
+    selectedUrgency = "none"; selectedItemColor = null;
+  }
+  buildUrgOptions(); buildItemSwatches();
+  itemOverlay.classList.add("open");
+  if (!editing && tituloInicial) { itemDescInput.focus(); }
+  else { itemTitleInput.focus(); itemTitleInput.select(); }
+}
+$("itemCancel").addEventListener("click", () => itemOverlay.classList.remove("open"));
+$("itemSave").addEventListener("click", () => {
+  const title = itemTitleInput.value.trim();
+  if (!title) { itemTitleInput.focus(); return; }
+  const desc = itemDescInput.value.trim();
+  const due = itemDueInput.value || null;
+  const col = findColumn(itemTarget.colId);
+  if (!col) { itemOverlay.classList.remove("open"); return; }
+  if (itemTarget.itemId) {
+    const it = col.items.find(x => x.id === itemTarget.itemId);
+    it.title = title; it.description = desc; it.due = due;
+    it.urgency = selectedUrgency; it.color = selectedItemColor;
+  } else {
+    col.items.push({ id: uid("item"), title, description: desc, due, descVisible: allVisible,
+                     urgency: selectedUrgency, color: selectedItemColor });
+  }
+  itemOverlay.classList.remove("open");
+  touch(); render();
+});
+itemTitleInput.addEventListener("keydown", (e) => { if (e.key === "Enter") $("itemSave").click(); });
+
+/* ============================================================
+   ANOTAÇÕES
+   ============================================================ */
+const notesList = $("notesList");
+const notesPanel = $("notesPanel");
+
+function renderNotes() {
+  notesList.innerHTML = "";
+  if (!state.notes || state.notes.length === 0) {
+    notesList.append(el("p", { class: "notes-empty", text: "Guarde aqui o que não cabe num cartão: um recado, um número, um lembrete solto." }));
+    return;
+  }
+  state.notes.forEach(note => {
+    const ta = el("textarea", { placeholder: "Escreva sua anotação…",
+      onInput: (e) => { note.text = e.target.value; crescer(); touch(); } });
+    ta.value = note.text || "";
+    // O campo acompanha o texto, em vez de exibir uma alça de redimensionar.
+    function crescer() { ta.style.height = "auto"; ta.style.height = (ta.scrollHeight + 2) + "px"; }
+    const colors = el("div", { class: "note-colors" });
+    NOTE_COLORS.forEach(hex => {
+      const dot = el("span", { class: "dot" + (hex === note.color ? " sel" : ""), title: "Cor da nota",
+        onClick: () => setNoteColor(note.id, hex) });
+      dot.style.background = hex; colors.append(dot);
+    });
+    const foot = el("div", { class: "note-foot" }, colors,
+      el("button", { class: "note-del", title: "Vincular a um cartão", "aria-label": "Vincular a um cartão",
+        onClick: () => openLinkModal(note.id) }, svgIcon("i-link", "sm")),
+      el("button", { class: "note-del danger", title: "Excluir nota", "aria-label": "Excluir nota",
+        onClick: () => deleteNote(note.id) }, svgIcon("i-trash", "sm")));
+    const card = el("div", { class: "note" }, ta, foot);
+    const linked = note.itemId ? findItemAnywhere(note.itemId) : null;
+    if (linked) {
+      card.prepend(el("button", { class: "note-link", type: "button",
+        title: "Ir para o cartão “" + linked.item.title + "” (" + linked.col.name + ")",
+        onClick: () => focusCard(note.itemId) },
+        svgIcon("i-link", "sm"), el("span", { class: "txt", text: linked.item.title })));
+    }
+    card.style.background = note.color || NOTE_COLORS[0];
+    notesList.append(card);
+    crescer();   // só mede depois de inserido no documento
+  });
+}
+function addNote() {
+  if (notesPanel.classList.contains("closed")) toggleNotesPanel(true);
+  state.notes.push({ id: uid("note"), text: "", color: NOTE_COLORS[0], itemId: null });
+  touch(); renderNotes();
+  const fields = notesList.querySelectorAll("textarea");
+  if (fields.length) fields[fields.length - 1].focus();
+}
+function deleteNote(id) { state.notes = state.notes.filter(n => n.id !== id); touch(); renderNotes(); }
+function setNoteColor(id, color) { const n = state.notes.find(x => x.id === id); if (n) { n.color = color; touch(); renderNotes(); } }
+function toggleNotesPanel(force) {
+  const open = force !== undefined ? force : notesPanel.classList.contains("closed");
+  notesPanel.classList.toggle("closed", !open);
+  $("btnNotes").classList.toggle("on", open);
+  lsSet(LS_NOTES, open ? "1" : "0");
+}
+$("btnAddNote").addEventListener("click", addNote);
+$("btnNotes").addEventListener("click", () => toggleNotesPanel());
+$("btnCloseNotes").addEventListener("click", () => toggleNotesPanel(false));
+
+/* ---------- Vincular anotação a um cartão ---------- */
+const linkOverlay = $("linkOverlay");
+let linkingNoteId = null;
+function openLinkModal(noteId) {
+  linkingNoteId = noteId;
+  const note = state.notes.find(n => n.id === noteId);
+  if (!note) return;
+  const box = $("linkList");
+  box.innerHTML = "";
+  const temCartoes = state.columns.some(c => c.items.length > 0);
+  if (!temCartoes) {
+    box.append(el("div", { class: "dav-msg", text: "Nenhum cartão disponível. Crie um cartão para poder vincular esta anotação." }));
+  } else {
+    state.columns.forEach(col => {
+      if (!col.items.length) return;
+      const sw = el("span", { class: "swatch" });
+      sw.style.background = col.color;
+      box.append(el("div", { class: "link-group" }, sw, el("span", { text: col.name })));
+      col.items.forEach(it => {
+        box.append(el("button", {
+          class: "link-row" + (note.itemId === it.id ? " sel" : ""), type: "button",
+          onClick: () => {
+            note.itemId = it.id;
+            linkOverlay.classList.remove("open");
+            touch(); render();
+            toast("Anotação vinculada a “" + it.title + "”.", "ok");
+          }
+        }, svgIcon("i-list", "sm"), el("span", { class: "lr-name", text: it.title })));
+      });
+    });
+  }
+  $("linkClear").style.display = note.itemId ? "" : "none";
+  linkOverlay.classList.add("open");
+}
+$("linkCancel").addEventListener("click", () => linkOverlay.classList.remove("open"));
+$("linkClear").addEventListener("click", () => {
+  const note = state.notes.find(n => n.id === linkingNoteId);
+  if (note) { note.itemId = null; touch(); render(); toast("Vínculo removido.", "ok"); }
+  linkOverlay.classList.remove("open");
+});
+
+/* ============================================================
+   DESCRIÇÕES / TEMA / NOME / BUSCA
+   ============================================================ */
+function setDescriptionsVisible(visible) {
+  allVisible = visible;
+  state.columns.forEach(c => c.items.forEach(i => { i.descVisible = allVisible; }));
+  const btn = $("btnToggleDesc");
+  setIcon(btn, allVisible ? "i-eye" : "i-eye-off");
+  const label = allVisible ? "Ocultar descrições" : "Mostrar descrições";
+  btn.setAttribute("data-tip", label); btn.setAttribute("aria-label", label);
+  btn.classList.toggle("on", !allVisible);
+  touch(); render();
+}
+$("btnToggleDesc").addEventListener("click", () => setDescriptionsVisible(!allVisible));
+$("btnTheme").addEventListener("click", toggleTheme);
+$("startTheme").addEventListener("click", toggleTheme);
+$("vaultName").addEventListener("input", (e) => { state.name = e.target.value; touch(); });
+
+const searchInput = $("searchInput");
+searchInput.addEventListener("input", (e) => {
+  query = e.target.value.trim();
+  $("searchBox").classList.toggle("has-value", query.length > 0);
+  render();
+});
+$("searchClear").addEventListener("click", () => {
+  searchInput.value = ""; query = ""; $("searchBox").classList.remove("has-value"); render(); searchInput.focus();
+});
+
+/* ============================================================
+   CRIPTOGRAFIA — AES-GCM 256 + PBKDF2-SHA256
+   ============================================================ */
+function cryptoAvailable() { return !!(window.crypto && window.crypto.subtle); }
+function b64(buf) {
+  const bytes = new Uint8Array(buf); let s = "";
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s);
+}
+function unb64(str) { return Uint8Array.from(atob(str), c => c.charCodeAt(0)); }
+async function deriveKey(password, salt, iterations) {
+  const mat = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations, hash: "SHA-256" },
+    mat, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+async function encryptJSON(plaintext, password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(password, salt, PBKDF2_ITER);
+  const cipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(plaintext));
+  return JSON.stringify({ kanbanEncrypted: 1, app: "Kanban Klippel", iterations: PBKDF2_ITER,
+    salt: b64(salt), iv: b64(iv), data: b64(cipher) }, null, 2);
+}
+async function decryptJSON(envelope, password) {
+  const o = JSON.parse(envelope);
+  const iter = Number(o.iterations) > 0 ? Number(o.iterations) : 150000;   // compatível com a v1
+  const key = await deriveKey(password, unb64(o.salt), iter);
+  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(o.iv) }, key, unb64(o.data));
+  return new TextDecoder().decode(plain);
+}
+function isEncrypted(text) { try { const o = JSON.parse(text); return !!(o && o.kanbanEncrypted); } catch { return false; } }
+
+/* ---------- Diálogos de senha ---------- */
+const pwdSetOverlay = $("pwdSetOverlay");
+const pwdEnterOverlay = $("pwdEnterOverlay");
+let pwdSetResolve = null, pwdEnterResolve = null;
+
+function promptSetPassword(opts) {
+  const o = opts || {};
+  return new Promise(res => {
+    pwdSetResolve = res;
+    $("pwdSetTitle").firstChild.nodeValue = o.title || "Proteger o cofre";
+    $("pwdSetText").textContent = o.text || "Você pode proteger este cofre com uma senha. O arquivo será criptografado e exigirá a senha para ser aberto novamente.";
+    $("pwdSetSkip").textContent = o.skipLabel || "Sem senha";
+    $("pwdSet1").value = ""; $("pwdSet2").value = ""; $("pwdSetError").textContent = "";
+    pwdSetOverlay.classList.add("open");
+    $("pwdSet1").focus();
+  });
+}
+function resolveSetPwd(val) { if (pwdSetResolve) { const r = pwdSetResolve; pwdSetResolve = null; pwdSetOverlay.classList.remove("open"); r(val); } }
+$("pwdSetOk").addEventListener("click", () => {
+  const a = $("pwdSet1").value, b = $("pwdSet2").value, err = $("pwdSetError");
+  if (!a) { err.textContent = "Digite uma senha."; return; }
+  if (a.length < 4) { err.textContent = "Use pelo menos 4 caracteres."; return; }
+  if (a !== b) { err.textContent = "As senhas não coincidem."; return; }
+  resolveSetPwd({ password: a });
+});
+$("pwdSetSkip").addEventListener("click", () => resolveSetPwd({ password: null }));
+$("pwdSet2").addEventListener("keydown", (e) => { if (e.key === "Enter") $("pwdSetOk").click(); });
+
+function promptEnterPassword(text) {
+  return new Promise(res => {
+    pwdEnterResolve = res;
+    $("pwdEnter1").value = ""; $("pwdEnterError").textContent = "";
+    $("pwdEnterText").textContent = text || "Este cofre está protegido por senha.";
+    pwdEnterOverlay.classList.add("open");
+    $("pwdEnter1").focus();
+  });
+}
+function resolveEnterPwd(val) { if (pwdEnterResolve) { const r = pwdEnterResolve; pwdEnterResolve = null; pwdEnterOverlay.classList.remove("open"); r(val); } }
+$("pwdEnterOk").addEventListener("click", () => {
+  const v = $("pwdEnter1").value;
+  if (!v) { $("pwdEnterError").textContent = "Digite a senha."; return; }
+  resolveEnterPwd(v);
+});
+$("pwdEnterCancel").addEventListener("click", () => resolveEnterPwd(null));
+$("pwdEnter1").addEventListener("keydown", (e) => { if (e.key === "Enter") $("pwdEnterOk").click(); });
+
+/* ---------- Senha do cofre pelo menu ---------- */
+function updatePasswordLabel() {
+  $("miPasswordSub").textContent = currentPassword ? "Protegido por senha" : "Sem proteção";
+}
+async function managePassword() {
+  if (!cryptoAvailable()) { toast("Criptografia indisponível neste contexto.", "err"); return; }
+  const res = await promptSetPassword({
+    title: currentPassword ? "Alterar senha do cofre" : "Proteger o cofre",
+    text: currentPassword
+      ? "Defina uma nova senha para este cofre, ou remova a proteção. A mudança vale a partir da próxima gravação."
+      : "Defina uma senha para criptografar este cofre. A proteção passa a valer na próxima gravação.",
+    skipLabel: currentPassword ? "Remover senha" : "Sem senha"
+  });
+  if (res === null) return;
+  currentPassword = res.password;
+  passwordDecided = true;
+  updatePasswordLabel();
+  touch();
+  toast(currentPassword ? "Senha definida. Salve o cofre para aplicar." : "Proteção removida. Salve o cofre para aplicar.", "ok");
+}
+
+/* ============================================================
+   SERIALIZAÇÃO E LEITURA DO COFRE
+   ============================================================ */
+function serialize() {
+  state.version = APP_VERSION;
+  state.updatedAt = new Date().toISOString();
+  return JSON.stringify(state, null, 2);
+}
+async function buildContent() {
+  const json = serialize();
+  if (!currentPassword) return json;
+  try { return await encryptJSON(json, currentPassword); }
+  catch { toast("Falha ao criptografar o cofre.", "err"); return null; }
+}
+function loadFromText(text) {
+  const parsed = JSON.parse(text);
+  if (!parsed || !Array.isArray(parsed.columns)) throw new Error("Formato inválido");
+  state = {
+    name: typeof parsed.name === "string" ? parsed.name : "Sem título",
+    version: parsed.version || "1.0",
+    updatedAt: parsed.updatedAt || null,
+    columns: parsed.columns.map(c => ({
+      id: c.id || uid("col"), name: c.name || "Coluna", color: c.color || COL_COLORS[0],
+      items: Array.isArray(c.items) ? c.items.map(i => ({
+        id: i.id || uid("item"), title: i.title || "Sem título", description: i.description || "",
+        due: i.due || null, descVisible: i.descVisible !== false,
+        urgency: i.urgency || "none", color: i.color || null
+      })) : []
+    })),
+    notes: Array.isArray(parsed.notes) ? parsed.notes.map(n => ({
+      id: n.id || uid("note"), text: typeof n.text === "string" ? n.text : "",
+      color: n.color || NOTE_COLORS[0], itemId: n.itemId || null
+    })) : []
+  };
+  allVisible = true;
+  setIcon($("btnToggleDesc"), "i-eye");
+  $("btnToggleDesc").classList.remove("on");
+  query = ""; searchInput.value = ""; $("searchBox").classList.remove("has-value");
+  passwordDecided = true;
+  updatePasswordLabel();
+  render();
+  markSaved();
+}
+async function decryptIfNeeded(text) {
+  if (!isEncrypted(text)) { currentPassword = null; return text; }
+  if (!cryptoAvailable()) { toast("Cofre criptografado, mas a criptografia não está disponível aqui.", "err"); return null; }
+  const pwd = await promptEnterPassword("Este cofre está protegido. Digite a senha para abri-lo.");
+  if (pwd === null) return null;
+  try { const json = await decryptJSON(text, pwd); currentPassword = pwd; return json; }
+  catch { toast("Senha incorreta ou arquivo corrompido.", "err"); return null; }
+}
+
+/* ============================================================
+   NOVO COFRE
+   ============================================================ */
+const newOverlay = $("newOverlay");
+function resetVault() {
+  state = { name: "Sem título", columns: [], notes: [], version: APP_VERSION, updatedAt: null };
+  target = { kind: null, path: null, handle: null, fileName: null, davPath: null, recentId: null };
+  currentPassword = null; passwordDecided = false;
+  allVisible = true; query = ""; searchInput.value = "";
+  $("searchBox").classList.remove("has-value");
+  setIcon($("btnToggleDesc"), "i-eye"); $("btnToggleDesc").classList.remove("on");
+  updatePasswordLabel();
+  render(); markSaved();
+}
+function newVaultFlow() {
+  const hasContent = state.columns.length > 0 || state.notes.length > 0;
+  if (!hasContent || !dirty) { openWizard(); return; }
+  newOverlay.classList.add("open");
+}
+$("btnNew").addEventListener("click", newVaultFlow);
+$("newCancel").addEventListener("click", () => newOverlay.classList.remove("open"));
+$("newDiscard").addEventListener("click", () => { newOverlay.classList.remove("open"); openWizard(); });
+$("newSave").addEventListener("click", async () => {
+  newOverlay.classList.remove("open");
+  if (await saveVault()) openWizard();
+});
+
+/* ============================================================
+   ASSISTENTE DE NOVO COFRE — nome, destino e senha de uma vez
+   ============================================================ */
+const wizOverlay = $("wizOverlay");
+let wizDest = "later";      // "local" | "cloud" | "later"
+let wizTarget = null;
+
+function wizSuggestedName() { return sanitizeFileName($("wizName").value.trim() || "cofre") + FILE_EXT; }
+function setWizDest(kind) {
+  wizDest = kind;
+  $("wizDestLocal").classList.toggle("sel", kind === "local");
+  $("wizDestCloud").classList.toggle("sel", kind === "cloud");
+  $("wizDestLater").classList.toggle("sel", kind === "later");
+}
+function showWizPath(text) {
+  $("wizPathText").textContent = text;
+  $("wizPath").style.display = text ? "" : "none";
+}
+function openWizard() {
+  wizTarget = null;
+  $("wizName").value = "";
+  $("wizProtect").checked = false;
+  $("wizPwd1").value = ""; $("wizPwd2").value = "";
+  $("wizPwdFields").classList.remove("open");
+  $("wizError").textContent = "";
+  showWizPath("");
+  setWizDest("later");
+  wizOverlay.classList.add("open");
+  $("wizName").focus();
+}
+$("wizProtect").addEventListener("change", (e) => {
+  $("wizPwdFields").classList.toggle("open", e.target.checked);
+  if (e.target.checked) $("wizPwd1").focus();
+});
+$("wizDestLater").addEventListener("click", () => { wizTarget = null; setWizDest("later"); showWizPath(""); });
+$("wizDestLocal").addEventListener("click", async () => {
+  const t = await pickDestination(wizSuggestedName());
+  if (!t) return;
+  if (t.kind === "download") {
+    wizTarget = null; setWizDest("later");
+    showWizPath("Este navegador não permite gravar direto na pasta; o arquivo será baixado ao salvar.");
+    return;
+  }
+  wizTarget = t; setWizDest("local");
+  showWizPath(t.kind === "tauri" ? t.path : t.fileName);
+});
+$("wizDestCloud").addEventListener("click", () => {
+  davPickCallback = (path) => {
+    wizTarget = { kind: "webdav", path: null, handle: null,
+                  fileName: path.split("/").pop(), davPath: path, recentId: null };
+    setWizDest("cloud");
+    showWizPath("Nuvem: /" + path);
+  };
+  if (!dav.connected) { openDavConnect(null, () => openDavBrowser("pickdir", true), true); return; }
+  openDavBrowser("pickdir", true);
+});
+$("wizCancel").addEventListener("click", () => { wizOverlay.classList.remove("open"); davPickCallback = null; });
+$("wizName").addEventListener("keydown", (e) => { if (e.key === "Enter") $("wizCreate").click(); });
+$("wizPwd2").addEventListener("keydown", (e) => { if (e.key === "Enter") $("wizCreate").click(); });
+
+$("wizCreate").addEventListener("click", async () => {
+  const err = $("wizError");
+  err.textContent = "";
+  const name = $("wizName").value.trim() || "Sem título";
+
+  let pwd = null;
+  if ($("wizProtect").checked) {
+    if (!cryptoAvailable()) { err.textContent = "Criptografia indisponível neste contexto."; return; }
+    const a = $("wizPwd1").value, b = $("wizPwd2").value;
+    if (!a) { err.textContent = "Digite uma senha."; return; }
+    if (a.length < 4) { err.textContent = "Use pelo menos 4 caracteres."; return; }
+    if (a !== b) { err.textContent = "As senhas não coincidem."; return; }
+    pwd = a;
+  }
+  if ((wizDest === "local" || wizDest === "cloud") && !wizTarget) {
+    err.textContent = "Escolha o local de gravação ou selecione “Definir depois”.";
+    return;
+  }
+
+  resetVault();
+  state.name = name;
+  $("vaultName").value = name;
+  currentPassword = pwd;
+  passwordDecided = true;
+  updatePasswordLabel();
+
+  wizOverlay.classList.remove("open");
+  closeStart();
+
+  if (wizTarget) {
+    target = wizTarget;
+    const ok = await writeToTarget(false);
+    if (!ok) {
+      target = { kind: null, path: null, handle: null, fileName: null, davPath: null, recentId: null };
+      touch();
+    }
+  } else {
+    touch();
+  }
+  wizTarget = null;
+  render();
+  toast("Cofre “" + name + "” criado.", "ok");
+});
+
+/* ============================================================
+   CAMADA DE ARQUIVO — Tauri, File System Access e download
+   ============================================================ */
+function isTauri() { return !!(window.__TAURI__ && window.__TAURI__.fs && window.__TAURI__.dialog); }
+function tauriFs() { return window.__TAURI__.fs; }
+function tauriDialog() { return window.__TAURI__.dialog; }
+
+async function ensureFsaPermission(handle) {
+  if (!handle || !handle.queryPermission) return true;
+  const opts = { mode: "readwrite" };
+  if ((await handle.queryPermission(opts)) === "granted") return true;
+  return (await handle.requestPermission(opts)) === "granted";
+}
+
+async function askPasswordOnFirstSave() {
+  // true = seguir adiante | false = cancelado pelo usuário
+  if (passwordDecided || !cryptoAvailable()) return true;
+  const res = await promptSetPassword();
+  if (res === null) return false;
+  currentPassword = res.password;
+  passwordDecided = true;
+  updatePasswordLabel();
+  return true;
+}
+
+async function writeToTarget(silent) {
+  const content = await buildContent();
+  if (content === null) return false;
+  try {
+    if (target.kind === "tauri") {
+      await tauriFs().writeTextFile(target.path, content);
+    } else if (target.kind === "fsa") {
+      if (!(await ensureFsaPermission(target.handle))) { if (!silent) toast("Permissão de gravação negada.", "err"); return false; }
+      const w = await target.handle.createWritable();
+      await w.write(content); await w.close();
+    } else if (target.kind === "webdav") {
+      await davPut(target.davPath, content);
+    } else {
+      return false;
+    }
+    markSaved();
+    await rememberRecent();
+    if (!silent) toast("Cofre salvo.", "ok");
+    return true;
+  } catch (err) {
+    if (!silent) toast("Não foi possível salvar: " + (err && err.message ? err.message : err), "err");
+    return false;
+  }
+}
+
+function sanitizeFileName(name) {
+  return String(name || "cofre").replace(/[\\/:*?"<>|]/g, "-").trim() || "cofre";
+}
+async function pickDestination(suggestedName) {
+  // Abre o seletor do sistema e devolve um destino, ou null se cancelado.
+  const suggested = suggestedName || (sanitizeFileName(state.name) + FILE_EXT);
+
+  if (isTauri()) {
+    try {
+      const path = await tauriDialog().save({ defaultPath: suggested,
+        filters: [{ name: "Cofre Kanban Klippel", extensions: ["kanban", "json"] }] });
+      if (!path) return null;
+      return { kind: "tauri", path, handle: null, fileName: null, davPath: null, recentId: null };
+    } catch { toast("Não foi possível escolher o destino.", "err"); return null; }
+  }
+
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({ suggestedName: suggested,
+        types: [{ description: "Cofre Kanban Klippel", accept: { "application/json": [".kanban", ".json"] } }] });
+      return { kind: "fsa", path: null, handle, fileName: handle.name, davPath: null, recentId: null };
+    } catch (err) { if (err && err.name === "AbortError") return null; }
+  }
+
+  // Navegador sem seletor: o arquivo será baixado
+  return { kind: "download", path: null, handle: null, fileName: suggested, davPath: null, recentId: null };
+}
+async function chooseDestination() {
+  const t = await pickDestination();
+  if (!t) return false;
+  target = t;
+  return true;
+}
+
+async function saveVault(opts) {
+  const o = opts || {};
+  const silent = !!o.silent;
+
+  if (o.saveAs || !target.kind) {
+    const previousTarget = Object.assign({}, target);
+    if (!(await chooseDestination())) return false;
+    if (!(await askPasswordOnFirstSave())) { target = previousTarget; return false; }
+  }
+
+  if (target.kind === "download") {
+    const content = await buildContent();
+    if (content === null) return false;
+    const blob = new Blob([content], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = el("a", { href: url, download: target.fileName || ("cofre" + FILE_EXT) });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    markSaved();
+    if (!silent) toast("Arquivo baixado.", "ok");
+    return true;
+  }
+  return await writeToTarget(silent);
+}
+$("btnSave").addEventListener("click", () => saveVault());
+
+/* ---------- Abrir do computador ---------- */
+async function openVaultFromDisk() {
+  if (isTauri()) {
+    try {
+      const selected = await tauriDialog().open({ multiple: false,
+        filters: [{ name: "Cofre Kanban Klippel", extensions: ["kanban", "json"] }] });
+      if (!selected) return false;
+      const raw = await tauriFs().readTextFile(selected);
+      const json = await decryptIfNeeded(raw);
+      if (json === null) return false;
+      target = { kind: "tauri", path: selected, handle: null, fileName: null, davPath: null, recentId: null };
+      loadFromText(json);
+      await rememberRecent();
+      closeStart(); toast("Cofre aberto.", "ok");
+      return true;
+    } catch (err) { toast("Não foi possível abrir o arquivo.", "err"); return false; }
+  }
+  if (window.showOpenFilePicker) {
+    let handle = null;
+    try {
+      const picked = await window.showOpenFilePicker({
+        types: [{ description: "Cofre Kanban Klippel", accept: { "application/json": [".kanban", ".json"] } }] });
+      handle = picked[0];
+    } catch (err) {
+      if (err && err.name === "AbortError") return false;
+      handle = null;   // navegador sem suporte: cai no seletor simples
+    }
+    if (handle) {
+      try {
+        const file = await handle.getFile();
+        const raw = await file.text();
+        const json = await decryptIfNeeded(raw);
+        if (json === null) return false;
+        target = { kind: "fsa", path: null, handle, fileName: file.name, davPath: null, recentId: null };
+        loadFromText(json);
+        await rememberRecent();
+        closeStart(); toast("Cofre aberto.", "ok");
+        return true;
+      } catch (err) {
+        toast("Arquivo inválido: não parece um cofre do Kanban Klippel.", "err");
+        return false;
+      }
+    }
+  }
+  $("fileInput").click();
+  return false;
+}
+$("btnOpen").addEventListener("click", openVaultFromDisk);
+$("fileInput").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const json = await decryptIfNeeded(String(reader.result));
+    if (json !== null) {
+      target = { kind: "download", path: null, handle: null, fileName: file.name, davPath: null, recentId: null };
+      try { loadFromText(json); closeStart(); toast("Cofre aberto.", "ok"); }
+      catch { toast("Arquivo inválido: não parece um cofre do Kanban Klippel.", "err"); }
+    }
+    e.target.value = "";
+  };
+  reader.readAsText(file);
+});
+
+/* ---------- Abrir a partir da lista de recentes ---------- */
+async function openRecent(id) {
+  const entry = loadRecents().find(r => r.id === id);
+  if (!entry) return;
+  try {
+    let raw = null;
+    if (entry.kind === "tauri") {
+      if (!isTauri()) { toast("Este atalho só funciona no aplicativo de mesa.", "err"); return; }
+      raw = await tauriFs().readTextFile(entry.path);
+    } else if (entry.kind === "fsa") {
+      const handle = await idbGet(entry.id);
+      if (!handle) { toast("Atalho expirado. Abra o arquivo novamente.", "err"); await forgetRecent(id); return; }
+      if (!(await ensureFsaPermission(handle))) { toast("Permissão de acesso negada.", "err"); return; }
+      const file = await handle.getFile();
+      raw = await file.text();
+      target = { kind: "fsa", path: null, handle, fileName: file.name, davPath: null, recentId: entry.id };
+    } else if (entry.kind === "webdav") {
+      if (!dav.connected || dav.url !== entry.davUrl) {
+        toast("Conecte-se à nuvem para abrir este cofre.", "err");
+        openDavConnect(entry.davUrl, () => openRecent(id));
+        return;
+      }
+      raw = await davGet(entry.davPath);
+      target = { kind: "webdav", path: null, handle: null, fileName: null, davPath: entry.davPath, recentId: entry.id };
+    }
+    if (raw === null) return;
+    const json = await decryptIfNeeded(raw);
+    if (json === null) return;
+    if (entry.kind === "tauri") {
+      target = { kind: "tauri", path: entry.path, handle: null, fileName: null, davPath: null, recentId: entry.id };
+    }
+    loadFromText(json);
+    await rememberRecent();
+    closeStart();
+    toast("Cofre aberto.", "ok");
+  } catch (err) {
+    toast("Não foi possível abrir: " + (err && err.message ? err.message : err), "err");
+  }
+}
+
+/* ============================================================
+   NUVEM — WebDAV (Nextcloud, ownCloud, Synology e afins)
+   ============================================================ */
+let dav = { url: "", user: "", pass: "", connected: false, remember: false };
+let davMode = "open";          // "open", "save" ou "pickdir"
+let davPickCallback = null;    // usado pelo assistente de novo cofre
+let davCwd = "";           // caminho relativo à raiz configurada, ex.: "Documentos/"
+
+function davFetchFn() {
+  if (window.__TAURI__ && window.__TAURI__.http && typeof window.__TAURI__.http.fetch === "function") {
+    return window.__TAURI__.http.fetch;
+  }
+  return window.fetch.bind(window);
+}
+function basicAuth(user, pass) {
+  const bytes = new TextEncoder().encode(user + ":" + pass);
+  let s = ""; for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return "Basic " + btoa(s);
+}
+function davJoin(rel) {
+  const base = dav.url.replace(/\/+$/, "") + "/";
+  const parts = String(rel || "").split("/").filter(Boolean).map(encodeURIComponent);
+  if (!parts.length) return base;
+  return base + parts.join("/") + (String(rel).endsWith("/") ? "/" : "");
+}
+function davDecodedPath(u) {
+  try { return decodeURIComponent(new URL(u, dav.url).pathname); }
+  catch { try { return decodeURIComponent(u); } catch { return u; } }
+}
+function davError(status) {
+  if (status === 401 || status === 403) return "Credenciais recusadas pelo servidor (" + status + ").";
+  if (status === 404) return "Caminho não encontrado no servidor (404).";
+  if (status === 405) return "Operação não permitida pelo servidor (405).";
+  if (status === 507) return "Espaço insuficiente no servidor (507).";
+  return "O servidor respondeu com o código " + status + ".";
+}
+async function davRequest(url, opts) {
+  const o = opts || {};
+  const headers = Object.assign({}, o.headers || {}, { Authorization: basicAuth(dav.user, dav.pass) });
+  const f = davFetchFn();
+  let res;
+  try {
+    res = await f(url, Object.assign({}, o, { headers }));
+  } catch (err) {
+    throw new Error("Não foi possível contactar o servidor. Verifique o endereço, a conexão e, em navegadores, a liberação de CORS.");
+  }
+  if (!res.ok) throw new Error(davError(res.status));
+  return res;
+}
+
+const PROPFIND_BODY =
+  '<?xml version="1.0" encoding="utf-8"?>' +
+  '<d:propfind xmlns:d="DAV:"><d:prop>' +
+  '<d:resourcetype/><d:getcontentlength/><d:getlastmodified/>' +
+  '</d:prop></d:propfind>';
+
+async function davList(cwd) {
+  const res = await davRequest(davJoin(cwd), {
+    method: "PROPFIND",
+    headers: { Depth: "1", "Content-Type": 'application/xml; charset="utf-8"' },
+    body: PROPFIND_BODY
+  });
+  const text = await res.text();
+  const doc = new DOMParser().parseFromString(text, "application/xml");
+  if (doc.getElementsByTagName("parsererror").length) throw new Error("Resposta inesperada do servidor WebDAV.");
+
+  const root = davDecodedPath(davJoin(cwd));
+  const rootNoSlash = root.replace(/\/+$/, "");
+  const responses = doc.getElementsByTagNameNS("DAV:", "response");
+  const out = [];
+  for (let i = 0; i < responses.length; i++) {
+    const r = responses[i];
+    const hrefNode = r.getElementsByTagNameNS("DAV:", "href")[0];
+    if (!hrefNode) continue;
+    const abs = davDecodedPath(hrefNode.textContent.trim());
+    if (abs === root || abs === rootNoSlash) continue;
+    if (abs.indexOf(root) !== 0) continue;
+    let rest = abs.slice(root.length);
+    if (!rest) continue;
+    const isDir = rest.endsWith("/");
+    const name = rest.replace(/\/+$/, "");
+    if (!name || name.indexOf("/") !== -1) continue;
+    const size = r.getElementsByTagNameNS("DAV:", "getcontentlength")[0];
+    const mod  = r.getElementsByTagNameNS("DAV:", "getlastmodified")[0];
+    out.push({
+      name, isDir,
+      size: size ? Number(size.textContent) : null,
+      modified: mod ? mod.textContent : null
+    });
+  }
+  out.sort((a, b) => (a.isDir === b.isDir) ? a.name.localeCompare(b.name, "pt-BR") : (a.isDir ? -1 : 1));
+  return out;
+}
+async function davGet(path) {
+  const res = await davRequest(davJoin(path), { method: "GET", headers: { "Cache-Control": "no-cache" } });
+  return await res.text();
+}
+async function davPut(path, content) {
+  await davRequest(davJoin(path), { method: "PUT", headers: { "Content-Type": "application/json" }, body: content });
+  return true;
+}
+
+/* ---------- Credenciais ---------- */
+function loadDavCreds() {
+  let raw = lsGet(LS_DAV);
+  let remembered = true;
+  if (!raw) { try { raw = sessionStorage.getItem(LS_DAV); remembered = false; } catch {} }
+  if (!raw) return;
+  try {
+    const o = JSON.parse(raw);
+    dav.url = o.url || ""; dav.user = o.user || ""; dav.pass = o.pass || "";
+    dav.remember = remembered;
+    dav.connected = !!(dav.url && dav.user);
+  } catch {}
+  updateDavLabel();
+}
+function storeDavCreds() {
+  const payload = JSON.stringify({ url: dav.url, user: dav.user, pass: dav.pass });
+  if (dav.remember) { lsSet(LS_DAV, payload); try { sessionStorage.removeItem(LS_DAV); } catch {} }
+  else { lsDel(LS_DAV); try { sessionStorage.setItem(LS_DAV, payload); } catch {} }
+}
+function clearDavCreds() {
+  lsDel(LS_DAV); try { sessionStorage.removeItem(LS_DAV); } catch {}
+  dav = { url: "", user: "", pass: "", connected: false, remember: false };
+  updateDavLabel();
+}
+function updateDavLabel() {
+  let host = "Não conectado";
+  if (dav.connected) { try { host = new URL(dav.url).host; } catch { host = dav.url; } }
+  $("miDavSub").textContent = dav.connected ? ("Conectado a " + host) : "Não conectado";
+}
+
+/* ---------- Modal de conexão ---------- */
+const davConnOverlay = $("davConnOverlay");
+let davConnAfter = null;
+function openDavConnect(prefillUrl, after, stacked) {
+  davConnAfter = after || null;
+  davConnOverlay.classList.toggle("stacked", !!stacked);
+  $("davUrl").value = prefillUrl || dav.url || "";
+  $("davUser").value = dav.user || "";
+  $("davPass").value = dav.pass || "";
+  $("davRemember").checked = !!dav.remember;
+  $("davConnError").textContent = "";
+  $("davDisconnect").style.display = dav.connected ? "" : "none";
+  davConnOverlay.classList.add("open");
+  ($("davUrl").value ? $("davUser") : $("davUrl")).focus();
+}
+$("davConnCancel").addEventListener("click", () => {
+  davConnOverlay.classList.remove("open", "stacked"); davConnAfter = null; davPickCallback = null;
+});
+$("davDisconnect").addEventListener("click", () => {
+  clearDavCreds(); davConnOverlay.classList.remove("open", "stacked"); toast("Desconectado da nuvem.", "ok");
+});
+$("davConnOk").addEventListener("click", async () => {
+  const err = $("davConnError");
+  const url = $("davUrl").value.trim();
+  const user = $("davUser").value.trim();
+  const pass = $("davPass").value;
+  if (!/^https?:\/\//i.test(url)) { err.textContent = "Informe um endereço começando por http:// ou https://"; return; }
+  if (!user) { err.textContent = "Informe o usuário."; return; }
+  err.textContent = "Verificando conexão…";
+  const previous = Object.assign({}, dav);
+  dav.url = url; dav.user = user; dav.pass = pass; dav.remember = $("davRemember").checked;
+  try {
+    await davList("");
+    dav.connected = true;
+    storeDavCreds();
+    updateDavLabel();
+    davConnOverlay.classList.remove("open", "stacked");
+    toast("Conectado à nuvem.", "ok");
+    const after = davConnAfter; davConnAfter = null;
+    if (after) after();
+  } catch (e) {
+    dav = previous;
+    err.textContent = e && e.message ? e.message : "Falha ao conectar.";
+  }
+});
+
+/* ---------- Navegador de pastas ---------- */
+const davBrowseOverlay = $("davBrowseOverlay");
+function openDavBrowser(mode, stacked) {
+  davMode = mode;
+  if (!dav.connected) { openDavConnect(null, () => openDavBrowser(mode, stacked), stacked); return; }
+  davBrowseOverlay.classList.toggle("stacked", !!stacked);
+  $("davBrowseTitle").firstChild.nodeValue =
+    mode === "save" ? "Salvar cofre na nuvem" :
+    mode === "pickdir" ? "Escolher pasta na nuvem" : "Abrir cofre da nuvem";
+  let host = dav.url; try { host = new URL(dav.url).host; } catch {}
+  $("davBrowseSub").textContent = host;
+  const comArquivo = (mode === "save" || mode === "pickdir");
+  $("davSaveField").style.display = comArquivo ? "" : "none";
+  $("davSaveHere").style.display = comArquivo ? "" : "none";
+  $("davSaveHereLabel").textContent = mode === "pickdir" ? "Usar esta pasta" : "Salvar aqui";
+  if (mode === "pickdir") {
+    $("davFileName").value = wizSuggestedName();
+  }
+  if (mode === "save") {
+    const base = target.davPath ? target.davPath.split("/").pop() : ((state.name || "cofre").replace(/[\\/:*?"<>|]/g, "-") + FILE_EXT);
+    $("davFileName").value = base;
+    if (target.kind === "webdav" && target.davPath && target.davPath.indexOf("/") !== -1) {
+      davCwd = target.davPath.slice(0, target.davPath.lastIndexOf("/") + 1);
+    }
+  }
+  davBrowseOverlay.classList.add("open");
+  refreshDavList();
+}
+function renderCrumbs() {
+  const box = $("davCrumbs");
+  box.innerHTML = "";
+  const parts = davCwd.split("/").filter(Boolean);
+  box.append(el("button", { type: "button", text: "Início", onClick: () => { davCwd = ""; refreshDavList(); } }));
+  let acc = "";
+  parts.forEach(p => {
+    acc += p + "/";
+    const here = acc;
+    box.append(el("span", { class: "sep" }, svgIcon("i-chev-right", "sm")));
+    box.append(el("button", { type: "button", text: p, onClick: () => { davCwd = here; refreshDavList(); } }));
+  });
+  $("davUp").disabled = parts.length === 0;
+}
+async function refreshDavList() {
+  const list = $("davList");
+  renderCrumbs();
+  list.innerHTML = "";
+  list.append(el("div", { class: "dav-msg" }, el("div", { class: "spinner" }), el("span", { text: "Carregando…" })));
+  try {
+    const entries = await davList(davCwd);
+    list.innerHTML = "";
+    const visible = entries.filter(en => en.isDir || /\.(kanban|json)$/i.test(en.name));
+    if (!visible.length) {
+      list.append(el("div", { class: "dav-msg", text: "Esta pasta não contém subpastas nem cofres." }));
+      return;
+    }
+    visible.forEach(en => {
+      const meta = en.isDir ? "pasta" : (en.size !== null && !isNaN(en.size) ? Math.max(1, Math.round(en.size / 1024)) + " KB" : "");
+      list.append(el("button", {
+        class: "dav-row", type: "button",
+        onClick: () => en.isDir ? (davCwd = davCwd + en.name + "/", refreshDavList()) : davPickFile(en.name)
+      },
+        svgIcon(en.isDir ? "i-folder" : "i-file"),
+        el("span", { class: "dv-name", text: en.name }),
+        el("span", { class: "dv-meta", text: meta })
+      ));
+    });
+  } catch (e) {
+    list.innerHTML = "";
+    list.append(el("div", { class: "dav-msg", text: e && e.message ? e.message : "Falha ao listar a pasta." }));
+  }
+}
+$("davUp").addEventListener("click", () => {
+  const parts = davCwd.split("/").filter(Boolean);
+  parts.pop();
+  davCwd = parts.length ? parts.join("/") + "/" : "";
+  refreshDavList();
+});
+$("davRefresh").addEventListener("click", refreshDavList);
+$("davBrowseCancel").addEventListener("click", () => {
+  davBrowseOverlay.classList.remove("open", "stacked");
+  davPickCallback = null;
+});
+
+async function davPickFile(name) {
+  if (davMode === "save" || davMode === "pickdir") { $("davFileName").value = name; $("davFileName").focus(); return; }
+  const path = davCwd + name;
+  try {
+    const raw = await davGet(path);
+    const json = await decryptIfNeeded(raw);
+    if (json === null) return;
+    target = { kind: "webdav", path: null, handle: null, fileName: name, davPath: path, recentId: null };
+    loadFromText(json);
+    await rememberRecent();
+    davBrowseOverlay.classList.remove("open");
+    closeStart();
+    toast("Cofre aberto da nuvem.", "ok");
+  } catch (e) {
+    toast("Não foi possível abrir: " + (e && e.message ? e.message : e), "err");
+  }
+}
+$("davSaveHere").addEventListener("click", async () => {
+  let name = $("davFileName").value.trim();
+  if (!name) { $("davFileName").focus(); return; }
+  if (!/\.(kanban|json)$/i.test(name)) name += FILE_EXT;
+  const path = davCwd + name;
+
+  if (davMode === "pickdir") {
+    const cb = davPickCallback;
+    davPickCallback = null;
+    davBrowseOverlay.classList.remove("open", "stacked");
+    if (cb) cb(path);
+    return;
+  }
+
+  if (!(await askPasswordOnFirstSave())) return;
+  const content = await buildContent();
+  if (content === null) return;
+  try {
+    await davPut(path, content);
+    target = { kind: "webdav", path: null, handle: null, fileName: name, davPath: path, recentId: null };
+    markSaved();
+    await rememberRecent();
+    davBrowseOverlay.classList.remove("open");
+    toast("Cofre salvo na nuvem.", "ok");
+  } catch (e) {
+    toast("Não foi possível salvar: " + (e && e.message ? e.message : e), "err");
+  }
+});
+
+/* ============================================================
+   TELA INICIAL
+   ============================================================ */
+const startScreen = $("startScreen");
+function openStart() {
+  const canClose = state.columns.length > 0 || state.notes.length > 0 || !!target.kind;
+  $("startClose").style.display = canClose ? "" : "none";
+  renderRecents();
+  startScreen.classList.add("open");
+}
+function closeStart() { startScreen.classList.remove("open"); }
+$("startClose").addEventListener("click", closeStart);
+$("startNew").addEventListener("click", () => { newVaultFlow(); });
+$("startOpen").addEventListener("click", openVaultFromDisk);
+$("startCloud").addEventListener("click", () => openDavBrowser("open"));
+$("startGuide").addEventListener("click", () => openGuide());
+$("startGuideCard").addEventListener("click", () => openGuide("g1"));
+
+/* ============================================================
+   MENU PRINCIPAL
+   ============================================================ */
+const mainMenu = $("mainMenu");
+function toggleMenu(force) {
+  const open = force !== undefined ? force : !mainMenu.classList.contains("open");
+  mainMenu.classList.toggle("open", open);
+  $("btnMenu").setAttribute("aria-expanded", open ? "true" : "false");
+}
+$("btnMenu").addEventListener("click", (e) => { e.stopPropagation(); toggleMenu(); });
+document.addEventListener("click", (e) => {
+  if (mainMenu.classList.contains("open") && !mainMenu.contains(e.target) && e.target !== $("btnMenu")) toggleMenu(false);
+});
+function menuAction(id, fn) {
+  $(id).addEventListener("click", () => { toggleMenu(false); fn(); });
+}
+menuAction("miRecents", openStart);
+menuAction("miSaveAs", () => saveVault({ saveAs: true }));
+menuAction("miPassword", managePassword);
+menuAction("miAutosave", () => setAutosave(!autosaveOn));
+menuAction("miDavConnect", () => openDavConnect());
+menuAction("miDavOpen", () => openDavBrowser("open"));
+menuAction("miDavSave", () => openDavBrowser("save"));
+menuAction("miGuide", () => openGuide("g1"));
+menuAction("miShortcuts", () => openGuide("g5"));
+menuAction("miExit", pedirSaida);
+
+/* ---------- Salvamento automático ---------- */
+function setAutosave(on) {
+  autosaveOn = on;
+  lsSet(LS_AUTOSAVE, on ? "1" : "0");
+  $("autosaveBadge").style.display = on ? "" : "none";
+  if (autosaveTimer) { clearInterval(autosaveTimer); autosaveTimer = null; }
+  if (on) {
+    autosaveTimer = setInterval(() => {
+      if (dirty && target.kind && target.kind !== "download") writeToTarget(true);
+    }, 45000);
+  }
+  toast(on ? "Salvamento automático ativado." : "Salvamento automático desativado.", "ok");
+}
+
+/* ============================================================
+   SAIR DO APLICATIVO
+   ============================================================ */
+const exitOverlay = $("exitOverlay");
+let saindo = false;   // impede o aviso do navegador durante a saída deliberada
+
+function temConteudo() { return state.columns.length > 0 || state.notes.length > 0; }
+
+function pedirSaida() {
+  if (dirty && temConteudo()) {
+    $("exitVaultName").textContent = "“" + (state.name || "Sem título") + "”";
+    exitOverlay.classList.add("open");
+    $("exitSave").focus();
+    return;
+  }
+  encerrar();
+}
+
+async function encerrar() {
+  saindo = true;
+  if (autosaveTimer) { clearInterval(autosaveTimer); autosaveTimer = null; }
+
+  const T = window.__TAURI__;
+  if (T) {
+    try {
+      // Caminho normal no aplicativo de mesa: fechar a janela encerra o processo.
+      if (T.window && typeof T.window.getCurrentWindow === "function") {
+        await T.window.getCurrentWindow().close();
+        return;
+      }
+      // Alternativa, caso o plugin de processo esteja disponível.
+      if (T.process && typeof T.process.exit === "function") {
+        await T.process.exit(0);
+        return;
+      }
+    } catch (err) {
+      saindo = false;
+      toast("Não foi possível fechar a janela: " +
+            (err && err.message ? err.message : err) +
+            " — verifique a permissão core:window:allow-close.", "err");
+      return;
+    }
+  }
+
+  // No navegador, window.close() só funciona em abas abertas por script.
+  try { window.close(); } catch (e) { /* ignorado */ }
+  setTimeout(function () {
+    saindo = false;
+    toast("Feche a aba ou a janela do navegador para sair.", "info");
+  }, 400);
+}
+
+$("btnExit").addEventListener("click", pedirSaida);
+$("exitCancel").addEventListener("click", () => exitOverlay.classList.remove("open"));
+$("exitDiscard").addEventListener("click", () => { exitOverlay.classList.remove("open"); encerrar(); });
+$("exitSave").addEventListener("click", async () => {
+  exitOverlay.classList.remove("open");
+  if (await saveVault()) encerrar();
+});
+
+/* ============================================================
+   GUIA
+   ============================================================ */
+const guideOverlay = $("guideOverlay");
+function openGuide(pane) {
+  selectGuidePane(pane || "g1");
+  guideOverlay.classList.add("open");
+}
+function selectGuidePane(id) {
+  document.querySelectorAll(".guide-tab").forEach(t => t.classList.toggle("sel", t.getAttribute("data-pane") === id));
+  document.querySelectorAll(".guide-pane").forEach(p => p.classList.toggle("sel", p.id === id));
+}
+document.querySelectorAll(".guide-tab").forEach(tab => {
+  tab.addEventListener("click", () => selectGuidePane(tab.getAttribute("data-pane")));
+});
+$("guideClose").addEventListener("click", () => guideOverlay.classList.remove("open"));
+
+/* ============================================================
+   FECHAMENTO DE MODAIS E ATALHOS
+   ============================================================ */
+function closeOverlay(ov) {
+  if (ov === pwdSetOverlay)   { resolveSetPwd(null); return; }
+  if (ov === pwdEnterOverlay) { resolveEnterPwd(null); return; }
+  if (ov === confirmOverlay)  { resolveConfirm(false); return; }
+  ov.classList.remove("open");
+}
+document.querySelectorAll(".overlay").forEach(ov => {
+  ov.addEventListener("click", (e) => { if (e.target === ov) closeOverlay(ov); });
+});
+
+const SHORTCUTS = {
+  n: () => newVaultFlow(),
+  o: () => openVaultFromDisk(),
+  s: () => saveVault(),
+  r: () => openStart(),
+  l: () => openColModal(),
+  k: () => { searchInput.focus(); searchInput.select(); },
+  q: () => pedirSaida(),
+  "1": () => toggleNotesPanel(),
+  "2": () => toggleTheme(),
+  "3": () => setDescriptionsVisible(!allVisible)
+};
+window.addEventListener("keydown", (e) => {
+  if (e.key === "F1") { e.preventDefault(); openGuide("g1"); return; }
+  if (e.key === "Escape") {
+    if (mainMenu.classList.contains("open")) { toggleMenu(false); return; }
+    const stacked = document.querySelectorAll(".overlay.open.stacked");
+    if (stacked.length) { stacked.forEach(ov => { ov.classList.remove("stacked"); closeOverlay(ov); }); return; }
+    const open = document.querySelectorAll(".overlay.open");
+    if (open.length) { open.forEach(closeOverlay); return; }
+    if (startScreen.classList.contains("open") && $("startClose").style.display !== "none") closeStart();
+    return;
+  }
+  if (e.ctrlKey && !e.altKey && !e.metaKey) {
+    if (document.querySelector(".overlay.open")) return;
+    const key = e.key.toLowerCase();
+    if (startScreen.classList.contains("open") && key !== "n" && key !== "o" && key !== "2" && key !== "q") return;
+    if (e.shiftKey) {
+      if (e.key.toLowerCase() === "s") { e.preventDefault(); saveVault({ saveAs: true }); }
+      return;
+    }
+    const fn = SHORTCUTS[key];
+    if (fn) { e.preventDefault(); e.stopPropagation(); fn(); }
+  }
+}, true);
+
+window.addEventListener("beforeunload", (e) => {
+  if (saindo) return;   // saída deliberada: a confirmação já foi feita
+  if (dirty && temConteudo()) { e.preventDefault(); e.returnValue = ""; }
+});
+
+/* ============================================================
+   INICIALIZAÇÃO
+   ============================================================ */
+(function init() {
+  applyTheme(lsGet(LS_THEME) === "dark" ? "dark" : "light");
+  toggleNotesPanel(lsGet(LS_NOTES) === "1");
+  loadDavCreds();
+  updatePasswordLabel();
+  updateDavLabel();
+
+  if (lsGet(LS_AUTOSAVE) === "1") {
+    autosaveOn = true;
+    $("autosaveBadge").style.display = "";
+    autosaveTimer = setInterval(() => {
+      if (dirty && target.kind && target.kind !== "download") writeToTarget(true);
+    }, 45000);
+  }
+
+  render();
+  markSaved();
+  renderRecents();
+  openStart();
+  appReady = true;
+  window.__KK_OK__ = true;   // marcador de inicialização concluída
+
+  // O try/catch acima torna tudo local ao bloco. Esta é a porta de entrada
+  // para inspecionar o aplicativo pelo console das ferramentas do navegador.
+  window.KK = {
+    get state() { return state; },
+    get target() { return target; },
+    get dirty() { return dirty; },
+    render, applyTheme, openStart, closeStart, toast, saveVault
+  };
+})();
+
+} catch (__falha) {
+  // Captura o erro real, com mensagem e pilha íntegras — ao contrário do
+  // window.onerror, que o WebKitGTK entrega vazio sob origem opaca.
+  if (window.__kkErro) {
+    window.__kkErro(
+      "ERRO NA INICIALIZAÇÃO DO APLICATIVO",
+      (__falha && __falha.name ? __falha.name + ": " : "") +
+      (__falha && __falha.message ? __falha.message : String(__falha)),
+      (__falha && __falha.stack) ? __falha.stack : "(sem pilha de chamadas)"
+    );
+  }
+}
+</script>
+</body>
+</html>

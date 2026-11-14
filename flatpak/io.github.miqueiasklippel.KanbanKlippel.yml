@@ -1,0 +1,40 @@
+id: io.github.miqueiasklippel.KanbanKlippel
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+command: kanban-klippel
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+modules:
+  - name: kanban-klippel
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 kanban-klippel.py /app/bin/kanban-klippel
+      - install -Dm644 index.html /app/share/kanban-klippel/index.html
+      - install -Dm644 bridge.js /app/share/kanban-klippel/bridge.js
+      - install -Dm644 ${FLATPAK_ID}.desktop /app/share/applications/${FLATPAK_ID}.desktop
+      - install -Dm644 ${FLATPAK_ID}.metainfo.xml /app/share/metainfo/${FLATPAK_ID}.metainfo.xml
+      - for s in 64 128 256 512; do install -Dm644 ${s}.png /app/share/icons/hicolor/${s}x${s}/apps/${FLATPAK_ID}.png; done
+    sources:
+      - type: file
+        path: ../index.html
+      - type: file
+        path: kanban-klippel.py
+      - type: file
+        path: bridge.js
+      - type: file
+        path: io.github.miqueiasklippel.KanbanKlippel.desktop
+      - type: file
+        path: io.github.miqueiasklippel.KanbanKlippel.metainfo.xml
+      - type: file
+        path: icons/64.png
+      - type: file
+        path: icons/128.png
+      - type: file
+        path: icons/256.png
+      - type: file
+        path: icons/512.png

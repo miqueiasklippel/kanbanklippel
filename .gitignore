@@ -1,0 +1,12 @@
+# Artefatos do Flatpak
+flatpak/build/
+flatpak/repo/
+flatpak/.flatpak-builder/
+*.flatpak
+
+# Sistema / editores
+__pycache__/
+.DS_Store
+*.swp
+.vscode/
+.idea/

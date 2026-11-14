@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Kanban Klippel
+GenericName=Quadro Kanban
+Comment=Organize tarefas em quadros kanban
+Exec=kanban-klippel
+Icon=io.github.miqueiasklippel.KanbanKlippel
+Terminal=false
+Categories=Office;ProjectManagement;
+Keywords=kanban;tarefas;quadro;projetos;notas;
+StartupNotify=true
+StartupWMClass=io.github.miqueiasklippel.KanbanKlippel
