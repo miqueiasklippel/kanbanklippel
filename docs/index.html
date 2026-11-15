@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kanban Klippel — quadros kanban offline e criptografados</title>
+<meta name="description" content="Quadro kanban 100% offline, com cofres criptografados salvos no computador ou em uma nuvem WebDAV. Um único arquivo HTML, sem contas e sem rastreamento.">
+<meta property="og:title" content="Kanban Klippel">
+<meta property="og:description" content="Quadro kanban 100% offline, com cofres criptografados no computador ou na sua nuvem WebDAV.">
+<meta property="og:image" content="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
+<style>
+  :root {
+    --accent: #084D6E; --accent-hover: #0A6392; --accent-soft: #DBE9F2; --accent-ink: #FFFFFF; --on-accent-soft: #05364D;
+    --bg: #F4F8FA; --bg-2: #DCE7EE; --surface: #FFFFFF; --surface-2: #EDF3F7; --surface-3: #DCE8F0;
+    --hero-grad: linear-gradient(180deg, #0A5A80 0%, #084D6E 58%, #06415E 100%); --hero-ink: #FFFFFF; --hero-muted: rgba(255,255,255,.78);
+    --ink: #0C1A24; --ink-muted: #455E71; --ink-soft: #7390A3;
+    --border: #C6D9E4; --hairline: rgba(12,26,36,.07);
+    --danger: #B91C1C; --warn: #B45309; --ok: #15803D;
+    --shadow-sm: 0 1px 2px rgba(10,46,66,.07), 0 2px 6px rgba(10,46,66,.05);
+    --shadow: 0 1px 2px rgba(10,46,66,.08), 0 8px 22px rgba(10,46,66,.09);
+    --shadow-lg: 0 2px 6px rgba(6,32,48,.14), 0 28px 60px rgba(6,32,48,.26);
+    --r-sm: 9px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px;
+    --ease: cubic-bezier(.2,.7,.3,1);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --accent: #4BA3D0; --accent-hover: #67B6DF; --accent-soft: #11313F; --accent-ink: #05222F; --on-accent-soft: #9BD2EE;
+      --bg: #0A151D; --bg-2: #0D1B24; --surface: #11222D; --surface-2: #162B37; --surface-3: #1E3848;
+      --hero-grad: linear-gradient(180deg, #0A222E 0%, #061620 70%); --hero-ink: #DCEBF4; --hero-muted: rgba(220,235,244,.72);
+      --ink: #E6EFF5; --ink-muted: #9BB2C0; --ink-soft: #728B9B;
+      --border: #1E3543; --hairline: rgba(255,255,255,.06);
+      --danger: #E8695B; --warn: #D08A31; --ok: #4CAF6D;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.34), 0 2px 6px rgba(0,0,0,.26);
+      --shadow: 0 1px 3px rgba(0,0,0,.4), 0 10px 26px rgba(0,0,0,.34);
+      --shadow-lg: 0 2px 8px rgba(0,0,0,.5), 0 28px 60px rgba(0,0,0,.55);
+      color-scheme: dark;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, "Cantarell", "Ubuntu", "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); }
+  code, kbd, .mono { font-family: ui-monospace, "Cascadia Mono", "Fira Mono", "DejaVu Sans Mono", Consolas, monospace; }
+  code { font-size: .88em; background: var(--surface-2); border: 1px solid var(--border); padding: 1px 6px; border-radius: 6px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  @media (max-width: 600px) { .wrap { padding: 0 16px; } }
+
+  /* ---------- Navegação ---------- */
+  .nav { position: sticky; top: 0; z-index: 10; background: var(--hero-grad); color: var(--hero-ink); border-bottom: 1px solid rgba(255,255,255,.12); }
+  .nav .wrap { display: flex; align-items: center; gap: 16px; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; font-weight: 700; letter-spacing: -.01em; }
+  .brand img { width: 30px; height: 30px; border-radius: 7px; }
+  .nav nav { margin-left: auto; display: flex; gap: 4px; }
+  .nav nav a { color: var(--hero-muted); text-decoration: none; font-size: 14px; padding: 6px 10px; border-radius: 8px; transition: background .15s var(--ease), color .15s; }
+  .nav nav a:hover { color: var(--hero-ink); background: rgba(255,255,255,.12); }
+  @media (max-width: 720px) { .nav nav a.opt { display: none; } }
+
+  /* ---------- Botões ---------- */
+  .btn { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-weight: 600; font-size: 15px; text-decoration: none; padding: 11px 18px; border-radius: var(--r-sm); border: 1px solid transparent; cursor: pointer; transition: transform .15s var(--ease), background .15s, box-shadow .15s; }
+  .btn:active { transform: translateY(1px); }
+  .btn svg { width: 18px; height: 18px; flex: none; }
+  .btn-light { background: #FFFFFF; color: #084D6E; box-shadow: 0 2px 10px rgba(0,0,0,.18); }
+  .btn-light:hover { background: #EAF3F8; }
+  .btn-ghost { background: rgba(255,255,255,.1); color: var(--hero-ink); border-color: rgba(255,255,255,.28); }
+  .btn-ghost:hover { background: rgba(255,255,255,.18); }
+  .btn-accent { background: var(--accent); color: var(--accent-ink); }
+  .btn-accent:hover { background: var(--accent-hover); }
+  .btn-outline { background: var(--surface); color: var(--ink); border-color: var(--border); }
+  .btn-outline:hover { background: var(--surface-2); }
+
+  /* ---------- Hero ---------- */
+  .hero { background: var(--hero-grad); color: var(--hero-ink); padding: 64px 0 0; overflow: hidden; position: relative; }
+  .hero::after { content: ""; position: absolute; inset: auto 0 0 0; height: 120px; background: linear-gradient(180deg, transparent, var(--bg)); pointer-events: none; }
+  .hero-text { text-align: center; max-width: 760px; margin: 0 auto; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); color: var(--hero-ink); }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: #4CD383; box-shadow: 0 0 0 3px rgba(76,211,131,.25); }
+  .hero h1 { font-size: clamp(34px, 6vw, 58px); line-height: 1.07; letter-spacing: -.03em; margin: 20px 0 16px; font-weight: 800; text-wrap: balance; }
+  .hero p.lead { font-size: clamp(17px, 2.2vw, 20px); color: var(--hero-muted); margin: 0 auto 30px; max-width: 620px; text-wrap: pretty; }
+  .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .hero small.note { display: block; margin-top: 14px; color: var(--hero-muted); font-size: 13px; }
+
+  /* ---------- Mock do aplicativo ---------- */
+  .mock { color: var(--ink); position: relative; z-index: 1; margin: 52px auto 0; max-width: 980px; border-radius: var(--r-xl) var(--r-xl) 0 0; background: var(--bg-2); box-shadow: var(--shadow-lg); border: 1px solid rgba(255,255,255,.16); border-bottom: 0; overflow: hidden; }
+  .mock-bar { color: #fff; display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: linear-gradient(180deg, #0A5A80 0%, #084D6E 100%); color: #fff; }
+  @media (prefers-color-scheme: dark) { .mock-bar { background: linear-gradient(180deg, #0A222E 0%, #061620 100%); } }
+  .mock-bar img { width: 22px; height: 22px; border-radius: 5px; }
+  .mock-bar b { font-size: 14px; }
+  .mock-bar .saved { font-size: 12px; opacity: .7; display: flex; align-items: center; gap: 5px; }
+  .mock-bar .saved::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #4CD383; }
+  .mock-bar .search { margin-left: auto; width: 200px; height: 28px; border-radius: 7px; background: rgba(255,255,255,.13); font-size: 12px; display: flex; align-items: center; padding: 0 10px; color: rgba(255,255,255,.6); }
+  .mock-bar .newcol { height: 28px; padding: 0 12px; border-radius: 7px; background: #fff; color: #084D6E; font-size: 12px; font-weight: 700; display: flex; align-items: center; }
+  @media (max-width: 600px) { .mock-bar .search { display: none; } .mock-bar .newcol { margin-left: auto; } }
+  .board { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 14px; padding: 18px; overflow-x: auto; scrollbar-width: thin; }
+  .col { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); padding: 10px; min-height: 260px; display: flex; flex-direction: column; gap: 8px; transition: background .15s, border-color .15s; }
+  .col.over { background: var(--accent-soft); border-color: var(--accent); }
+  .col-head { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; padding: 2px 4px 6px; }
+  .col-head i { width: 10px; height: 10px; border-radius: 3px; }
+  .col-head .count { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--ink-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--c, var(--border)); border-radius: var(--r-sm); padding: 10px 12px; box-shadow: var(--shadow-sm); cursor: grab; user-select: none; transition: transform .15s var(--ease), box-shadow .15s, opacity .15s; }
+  .card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+  .card.dragging { opacity: .4; }
+  .card h4 { margin: 0 0 4px; font-size: 13.5px; line-height: 1.35; }
+  .card p { margin: 0 0 8px; font-size: 12px; color: var(--ink-muted); line-height: 1.45; }
+  .meta { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-muted); border: 1px solid var(--border); }
+  .tag.u-high { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+  .tag.u-med { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+  .tag.u-low { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+  .tag.late { background: color-mix(in srgb, var(--danger) 12%, var(--surface)); color: var(--danger); border-color: transparent; }
+  .tag.today { background: color-mix(in srgb, var(--warn) 14%, var(--surface)); color: var(--warn); border-color: transparent; }
+  .mock-hint { text-align: center; font-size: 12px; color: var(--ink-soft); padding: 0 0 16px; }
+
+  /* ---------- Seções ---------- */
+  section { padding: 88px 0; }
+  .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
+  h2 { font-size: clamp(28px, 4vw, 40px); line-height: 1.15; letter-spacing: -.02em; margin: 0 0 14px; text-wrap: balance; }
+  .sub { color: var(--ink-muted); font-size: 18px; max-width: 640px; margin: 0; text-wrap: pretty; }
+  .center { text-align: center; } .center .sub { margin: 0 auto; }
+
+  .grid { display: grid; gap: 18px; margin-top: 44px; }
+  .g3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .feat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px; box-shadow: var(--shadow-sm); }
+  .feat .ico { width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center; background: var(--accent-soft); color: var(--on-accent-soft); margin-bottom: 14px; }
+  .feat .ico svg { width: 22px; height: 22px; }
+  .feat h3 { margin: 0 0 6px; font-size: 17px; letter-spacing: -.01em; }
+  .feat p { margin: 0; color: var(--ink-muted); font-size: 15px; }
+
+  /* Segurança */
+  .alt { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .split { display: grid; grid-template-columns: 1.05fr 1fr; gap: 56px; align-items: center; }
+  @media (max-width: 860px) { .split { grid-template-columns: 1fr; gap: 36px; } }
+  .checks { list-style: none; padding: 0; margin: 26px 0 0; display: grid; gap: 14px; }
+  .checks li { display: flex; gap: 12px; align-items: flex-start; }
+  .checks li svg { width: 22px; height: 22px; flex: none; color: var(--ok); margin-top: 1px; }
+  .checks b { display: block; }
+  .checks span { color: var(--ink-muted); font-size: 15px; }
+  .flow { background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 22px; display: grid; gap: 10px; }
+  .step { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 14px 16px; }
+  .step .n { width: 30px; height: 30px; flex: none; border-radius: 8px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-weight: 800; font-size: 14px; }
+  .step b { display: block; font-size: 15px; }
+  .step span { font-size: 13px; color: var(--ink-muted); }
+  .step code { font-size: 12px; }
+  .arrow { text-align: center; color: var(--ink-soft); font-size: 14px; line-height: 1; }
+  .warn-box { margin-top: 6px; font-size: 13px; color: var(--ink-muted); border-left: 3px solid var(--warn); padding: 4px 0 4px 12px; }
+
+  /* Atalhos */
+  .keys { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-top: 40px; }
+  .key { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px 14px; font-size: 15px; }
+  .key .k { display: flex; gap: 4px; flex: none; }
+  kbd { font-size: 12px; font-weight: 600; min-width: 26px; text-align: center; padding: 3px 7px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--border); border-bottom-width: 2px; color: var(--ink); }
+
+  /* Download */
+  .dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-top: 44px; }
+  .dl-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 26px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; }
+  .dl-card h3 { margin: 0 0 6px; font-size: 19px; display: flex; align-items: center; gap: 10px; }
+  .dl-card h3 svg { width: 22px; height: 22px; color: var(--accent); }
+  .dl-card p { color: var(--ink-muted); margin: 0 0 16px; font-size: 15px; }
+  .dl-card .actions { margin-top: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+  pre { margin: 0 0 18px; background: #0C1A24; color: #DCEBF4; border-radius: var(--r-md); padding: 14px 16px; font-size: 13px; line-height: 1.7; overflow-x: auto; }
+  pre .c { color: #7390A3; }
+
+  /* FAQ */
+  .faq { max-width: 780px; margin: 40px auto 0; display: grid; gap: 10px; }
+  details { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 0 18px; }
+  summary { cursor: pointer; list-style: none; padding: 16px 0; font-weight: 600; display: flex; justify-content: space-between; gap: 16px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font-size: 20px; line-height: 1; color: var(--ink-soft); transition: transform .2s var(--ease); }
+  details[open] summary::after { transform: rotate(45deg); }
+  details p { margin: 0 0 16px; color: var(--ink-muted); font-size: 15px; }
+
+  footer { border-top: 1px solid var(--border); padding: 32px 0 40px; color: var(--ink-muted); font-size: 14px; }
+  footer .wrap { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  footer .brand { color: var(--ink); }
+  footer .links { margin-left: auto; display: flex; gap: 18px; flex-wrap: wrap; }
+  footer a { color: var(--ink-muted); text-decoration: none; }
+  footer a:hover { color: var(--ink); }
+
+  .js .reveal { opacity: 0; transform: translateY(14px); transition: opacity .6s var(--ease), transform .6s var(--ease); }
+  .js .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } html { scroll-behavior: auto; } }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+    <symbol id="i-gh" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.3 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></symbol>
+    <symbol id="i-offline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M8.5 8.6A6 6 0 0 0 6 13.5M5 17h12.5M16.7 11.1A5 5 0 0 1 19 15.5"/><path d="M10.6 6.1A6.5 6.5 0 0 1 17 10"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3" fill="currentColor"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18.5h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.1 11 3.75 3.75 0 0 0 7 18.5z"/><path d="M12 11v5M9.5 13.5 12 16l2.5-2.5"/></symbol>
+    <symbol id="i-drag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="6" height="16" rx="1.5"/><rect x="14.5" y="4" width="6" height="9" rx="1.5"/><path d="M12 9.5h1.5m0 0L12 8m1.5 1.5L12 11"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5M8.5 9h7M8.5 12.5h4"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9.5 12.5 8 14l1.5 1.5M14.5 12.5 16 14l-1.5 1.5"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.4-4.4"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12.3 2.7 2.7L16 9.6"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.7 5.6 3.7 9S14.5 18.4 12 21c-2.5-2.6-3.7-5.6-3.7-9S9.5 5.6 12 3z"/></symbol>
+    <symbol id="i-linux" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M7 9l2.5 2L7 13M12 13h4"/></symbol>
+  </defs>
+</svg>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#"><img src="icon.png" alt="">Kanban Klippel</a>
+    <nav aria-label="Seções">
+      <a class="opt" href="#recursos">Recursos</a>
+      <a class="opt" href="#seguranca">Segurança</a>
+      <a class="opt" href="#baixar">Baixar</a>
+      <a href="https://github.com/miqueiasklippel/kanban-klippel" aria-label="Código no GitHub"><svg width="20" height="20" style="vertical-align:-4px"><use href="#i-gh"/></svg></a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero" style="padding-bottom:0">
+    <div class="wrap">
+      <div class="hero-text">
+        <span class="pill"><span class="dot"></span>Versão 1.0.0 · 100% offline</span>
+        <h1>Seus projetos organizados.<br>Seus dados só seus.</h1>
+        <p class="lead">Um quadro kanban leve que roda inteiro no seu computador, com cofres criptografados guardados onde você escolher — no disco ou na sua própria nuvem WebDAV.</p>
+        <div class="cta">
+          <a class="btn btn-light" href="app/"><svg><use href="#i-play"/></svg>Usar no navegador</a>
+          <a class="btn btn-ghost" href="#baixar"><svg><use href="#i-down"/></svg>Baixar para Linux</a>
+        </div>
+        <small class="note">Sem conta, sem servidor, sem rastreamento.</small>
+      </div>
+
+      <div class="mock" aria-label="Demonstração interativa do quadro">
+        <div class="mock-bar">
+          <img src="icon.png" alt="">
+          <b>Lançamento do site</b>
+          <span class="saved">salvo</span>
+          <span class="search">Buscar cartões…  Ctrl+K</span>
+          <span class="newcol">+ Coluna</span>
+        </div>
+        <div class="board" id="board">
+          <div class="col" data-col>
+            <div class="col-head"><i style="background:#7390A3"></i>A fazer<span class="count">0</span></div>
+            <div class="card" draggable="true" style="--c:#B91C1C">
+              <h4>Revisar textos da página inicial</h4>
+              <p>Conferir ortografia e o tom dos títulos.</p>
+              <div class="meta"><span class="tag u-high">Alta</span><span class="tag late">Atrasado · 12/11</span></div>
+            </div>
+            <div class="card" draggable="true" style="--c:#15803D">
+              <h4>Escolher paleta de cores</h4>
+              <div class="meta"><span class="tag u-low">Baixa</span></div>
+            </div>
+          </div>
+          <div class="col" data-col>
+            <div class="col-head"><i style="background:#B45309"></i>Em andamento<span class="count">0</span></div>
+            <div class="card" draggable="true" style="--c:#B45309">
+              <h4>Gerar pacote Flatpak</h4>
+              <p>Testar no GNOME 50 antes de publicar.</p>
+              <div class="meta"><span class="tag u-med">Média</span><span class="tag today">Vence hoje</span></div>
+            </div>
+          </div>
+          <div class="col" data-col>
+            <div class="col-head"><i style="background:#15803D"></i>Concluído<span class="count">0</span></div>
+            <div class="card" draggable="true" style="--c:#0A6392">
+              <h4>Configurar cofre na nuvem</h4>
+              <p>Nextcloud conectado com senha de aplicativo.</p>
+              <div class="meta"><span class="tag">Sem urgência</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="mock-hint">Experimente: arraste os cartões entre as colunas.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="recursos">
+    <div class="wrap">
+      <div class="center reveal">
+        <p class="eyebrow">Recursos</p>
+        <h2>Tudo o que um quadro precisa. Nada que você não pediu.</h2>
+        <p class="sub">Colunas, cartões e anotações, com o essencial bem feito e uma interface que não atrapalha.</p>
+      </div>
+      <div class="grid g3">
+        <div class="feat reveal"><div class="ico"><svg><use href="#i-offline"/></svg></div><h3>Totalmente offline</h3><p>Nenhum servidor, nenhuma conta, nenhum rastreamento. Funciona sem internet, do primeiro ao último clique.</p></div>
+        <div class="feat reveal"><div class="ico"><svg><use href="#i-lock"/></svg></div><h3>Cofres criptografados</h3><p>Proteja cada quadro com senha. O arquivo é cifrado com AES-GCM de 256 bits antes de sair da memória.</p></div>
+        <div class="feat reveal"><div class="ico"><svg><use href="#i-cloud"/></svg></div><h3>Sua nuvem WebDAV</h3><p>Abra e salve cofres direto no Nextcloud, ownCloud, Synology ou qualquer servidor WebDAV.</p></div>
+        <div class="feat reveal"><div class="ico"><svg><use href="#i-drag"/></svg></div><h3>Arrastar e soltar</h3><p>Mova cartões entre colunas e reordene as colunas pelo cabeçalho, com cores de identificação.</p></div>
+        <div class="feat reveal"><div class="ico"><svg><use href="#i-clock"/></svg></div><h3>Prazos e urgência</h3><p>O prazo fica âmbar no dia do vencimento e vermelho quando atrasa. Quatro níveis de urgência.</p></div>
+        <div class="feat reveal"><div class="ico"><svg><use href="#i-note"/></svg></div><h3>Anotações vinculadas</h3><p>Um painel de lembretes coloridos que podem ser ligados a cartões — um clique leva até eles.</p></div>
+        <div class="feat reveal"><div class="ico"><svg><use href="#i-search"/></svg></div><h3>Busca instantânea</h3><p>Filtre cartões por título e descrição em todas as colunas ao mesmo tempo.</p></div>
+        <div class="feat reveal"><div class="ico"><svg><use href="#i-moon"/></svg></div><h3>Tema claro e escuro</h3><p>Alterne com um atalho. Salvamento automático a cada 45 segundos, se você quiser.</p></div>
+        <div class="feat reveal"><div class="ico"><svg><use href="#i-file"/></svg></div><h3>Um único arquivo</h3><p>O aplicativo inteiro é um HTML sem dependências externas: fácil de auditar, copiar e levar com você.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="seguranca" class="alt">
+    <div class="wrap split">
+      <div class="reveal">
+        <p class="eyebrow">Privacidade e segurança</p>
+        <h2>O seu quadro é um arquivo. E só você tem a chave.</h2>
+        <p class="sub">Cada cofre é um arquivo <code>.kanban</code> que fica no seu computador ou na sua nuvem. Nada passa por servidores de terceiros.</p>
+        <ul class="checks">
+          <li><svg><use href="#i-check"/></svg><div><b>Criptografia de verdade</b><span>Chave derivada por PBKDF2-SHA256 com 210.000 iterações e conteúdo cifrado com AES-GCM de 256 bits.</span></div></li>
+          <li><svg><use href="#i-check"/></svg><div><b>Formato aberto</b><span>Sem senha, o cofre é JSON legível em qualquer editor de texto. Seus dados nunca ficam presos.</span></div></li>
+          <li><svg><use href="#i-check"/></svg><div><b>Credenciais locais</b><span>O login WebDAV só sai do dispositivo para falar com o seu servidor.</span></div></li>
+        </ul>
+      </div>
+      <div class="flow reveal" aria-label="Como um cofre é protegido">
+        <div class="step"><span class="n">1</span><div><b>Você define uma senha</b><span>Na criação do cofre ou pelo menu ⋮ → Senha do cofre</span></div></div>
+        <div class="arrow">↓</div>
+        <div class="step"><span class="n">2</span><div><b>A chave é derivada</b><span>PBKDF2-SHA256 · 210.000 iterações</span></div></div>
+        <div class="arrow">↓</div>
+        <div class="step"><span class="n">3</span><div><b>O quadro é cifrado</b><span>AES-GCM · 256 bits</span></div></div>
+        <div class="arrow">↓</div>
+        <div class="step"><span class="n">4</span><div><b>Gravado onde você quiser</b><span><code>projetos.kanban</code> no disco ou no WebDAV</span></div></div>
+        <p class="warn-box">Não existe recuperação de senha: sem ela, o conteúdo é irrecuperável — inclusive para o autor.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="atalhos">
+    <div class="wrap">
+      <div class="center reveal">
+        <p class="eyebrow">Atalhos de teclado</p>
+        <h2>Rápido nas mãos de quem usa o teclado.</h2>
+        <p class="sub">Os comandos mais comuns estão a uma combinação de distância. <kbd>F1</kbd> abre o guia completo.</p>
+      </div>
+      <div class="keys reveal">
+        <div class="key"><span class="k"><kbd>Ctrl</kbd><kbd>N</kbd></span>Novo cofre</div>
+        <div class="key"><span class="k"><kbd>Ctrl</kbd><kbd>O</kbd></span>Abrir cofre</div>
+        <div class="key"><span class="k"><kbd>Ctrl</kbd><kbd>S</kbd></span>Salvar</div>
+        <div class="key"><span class="k"><kbd>Ctrl</kbd><kbd>⇧</kbd><kbd>S</kbd></span>Salvar como</div>
+        <div class="key"><span class="k"><kbd>Ctrl</kbd><kbd>L</kbd></span>Nova coluna</div>
+        <div class="key"><span class="k"><kbd>Ctrl</kbd><kbd>K</kbd></span>Buscar cartões</div>
+        <div class="key"><span class="k"><kbd>Ctrl</kbd><kbd>R</kbd></span>Cofres recentes</div>
+        <div class="key"><span class="k"><kbd>Ctrl</kbd><kbd>1</kbd></span>Painel de anotações</div>
+        <div class="key"><span class="k"><kbd>Ctrl</kbd><kbd>2</kbd></span>Tema claro/escuro</div>
+        <div class="key"><span class="k"><kbd>Ctrl</kbd><kbd>3</kbd></span>Mostrar descrições</div>
+        <div class="key"><span class="k"><kbd>Ctrl</kbd><kbd>Q</kbd></span>Sair</div>
+        <div class="key"><span class="k"><kbd>Esc</kbd></span>Fechar janelas</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="baixar" class="alt">
+    <div class="wrap">
+      <div class="center reveal">
+        <p class="eyebrow">Comece agora</p>
+        <h2>Duas formas de usar. Ambas gratuitas.</h2>
+        <p class="sub">Use direto no navegador ou instale como aplicativo nativo no Linux.</p>
+      </div>
+      <div class="dl">
+        <div class="dl-card reveal">
+          <h3><svg><use href="#i-globe"/></svg>No navegador</h3>
+          <p>Abra e use. Funciona em qualquer navegador moderno — ou baixe o <code>index.html</code> e abra localmente, mesmo sem internet.</p>
+          <div class="actions">
+            <a class="btn btn-accent" href="app/"><svg><use href="#i-play"/></svg>Abrir o Kanban Klippel</a>
+            <a class="btn btn-outline" href="app/index.html" download="kanban-klippel.html"><svg><use href="#i-down"/></svg>Baixar HTML</a>
+          </div>
+        </div>
+        <div class="dl-card reveal">
+          <h3><svg><use href="#i-linux"/></svg>Aplicativo Flatpak para Linux</h3>
+          <p>Janela nativa GTK 4 + WebKit, integrada ao GNOME.</p>
+<pre><span class="c"># clonar e instalar</span>
+git clone https://github.com/miqueiasklippel/kanban-klippel
+cd kanban-klippel/flatpak
+./build.sh --install
+flatpak run io.github.miqueiasklippel.KanbanKlippel</pre>
+          <div class="actions">
+            <a class="btn btn-outline" href="https://github.com/miqueiasklippel/kanban-klippel"><svg><use href="#i-gh"/></svg>Ver no GitHub</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="perguntas">
+    <div class="wrap">
+      <div class="center reveal">
+        <p class="eyebrow">Perguntas frequentes</p>
+        <h2>Dúvidas comuns</h2>
+      </div>
+      <div class="faq reveal">
+        <details><summary>Usar no navegador envia meus dados para algum lugar?</summary><p>Não. A página é apenas entregue pelo GitHub Pages; depois de carregada, tudo roda no seu navegador. Os cofres são gravados no seu computador ou no servidor WebDAV que você configurar.</p></details>
+        <details><summary>Posso sincronizar entre computadores?</summary><p>Sim, salvando o cofre em um servidor WebDAV como Nextcloud ou ownCloud. No Nextcloud o endereço costuma ser <code>https://seu-servidor/remote.php/dav/files/USUARIO/</code>. Prefira uma senha de aplicativo.</p></details>
+        <details><summary>E se eu esquecer a senha do cofre?</summary><p>Não há como recuperar. A criptografia é feita para que ninguém — nem o autor — consiga abrir o arquivo sem a senha. Guarde-a em um gerenciador de senhas.</p></details>
+        <details><summary>Posso usar no trabalho, na minha empresa?</summary><p>O projeto usa a licença PolyForm Noncommercial 1.0.0: é livre para uso pessoal, estudo, pesquisa, ONGs, instituições de ensino e órgãos públicos. Para uso comercial, entre em contato pelo GitHub.</p></details>
+        <details><summary>O código é aberto?</summary><p>Sim. Todo o aplicativo está em um único arquivo HTML no repositório, fácil de ler e auditar.</p></details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="#"><img src="icon.png" alt="" style="width:24px;height:24px">Kanban Klippel</a>
+    <span>© 2026 Miqueias Klippel</span>
+    <div class="links">
+      <a href="app/">Abrir app</a>
+      <a href="https://github.com/miqueiasklippel/kanban-klippel">GitHub</a>
+      <a href="https://github.com/miqueiasklippel/kanban-klippel/blob/main/LICENSE">Licença</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Quadro de demonstração: arrastar e soltar
+  (function () {
+    const cols = document.querySelectorAll("[data-col]");
+    let dragged = null;
+    const recount = () => cols.forEach(c => { c.querySelector(".count").textContent = c.querySelectorAll(".card").length; });
+    document.querySelectorAll(".card").forEach(card => {
+      card.addEventListener("dragstart", e => { dragged = card; card.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; });
+      card.addEventListener("dragend", () => { card.classList.remove("dragging"); cols.forEach(c => c.classList.remove("over")); dragged = null; recount(); });
+    });
+    cols.forEach(col => {
+      col.addEventListener("dragover", e => {
+        if (!dragged) return;
+        e.preventDefault(); col.classList.add("over");
+        const after = [...col.querySelectorAll(".card:not(.dragging)")].find(c => {
+          const r = c.getBoundingClientRect(); return e.clientY < r.top + r.height / 2;
+        });
+        after ? col.insertBefore(dragged, after) : col.appendChild(dragged);
+      });
+      col.addEventListener("dragleave", e => { if (!col.contains(e.relatedTarget)) col.classList.remove("over"); });
+      col.addEventListener("drop", e => { e.preventDefault(); col.classList.remove("over"); });
+    });
+    recount();
+  })();
+
+  // Animação de entrada
+  (function () {
+    if (!("IntersectionObserver" in window)) return;
+    document.documentElement.classList.add("js");
+    const els = document.querySelectorAll(".reveal");
+    const io = new IntersectionObserver(entries => entries.forEach(en => {
+      if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
+    }), { threshold: .12 });
+    els.forEach(el => io.observe(el));
+  })();
+</script>
+</body>
+</html>
